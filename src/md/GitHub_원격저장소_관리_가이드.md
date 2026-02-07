@@ -94,3 +94,16 @@ git pull origin main
 1. 충돌이 발생한 파일을 에디터로 엽니다.
 2. `<<<<<<<`, `=======`, `>>>>>>>` 표시를 찾아 내용을 수정합니다.
 3. 수정 완료 후 다시 `git add .` -> `git commit` -> `git push`를 진행합니다.
+
+### 4.3 브랜치 불일치 오류 (Divergent Branches)
+`git pull` 시 `fatal: Need to specify how to reconcile divergent branches` 오류가 발생하는 경우입니다.
+- **원인**: 로컬과 원격 저장소의 히스토리가 갈라져서 Git이 병합 방식을 결정하지 못한 상태입니다.
+- **해결**: 병합(Merge) 방식을 기본으로 설정하여 해결할 수 있습니다.
+
+```bash
+# 1. Pull 전략을 Merge로 설정 (권장)
+git config pull.rebase false
+
+# 2. 다시 Pull 시도
+git pull origin main
+```
