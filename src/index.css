@@ -1,0 +1,225 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Spline+Sans:wght@500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-main: #f8f9fa;
+    --bg-card: #ffffff;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+
+    /* Legacy variables mapping */
+    --color-primary: #42f05f;
+    --color-secondary: #8c36e2;
+    --color-highlight: #f49d25;
+
+    --color-background: var(--bg-main);
+    --color-surface: var(--bg-card);
+    --color-text-dark: var(--text-main);
+    --color-text-light: var(--text-muted);
+  }
+
+  :root.dark {
+    --bg-main: #111827;
+    --bg-card: #1f2937;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border-color: #374151;
+
+    --color-background: var(--bg-main);
+    --color-surface: var(--bg-card);
+    --color-text-dark: var(--text-main);
+  }
+}
+
+:root {
+  /* Typography */
+  --font-heading: 'Be Vietnam Pro', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-game: 'Spline Sans', sans-serif;
+
+  /* Spacing & Radius */
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+  --shadow-float: 0 20px 40px -12px rgba(0, 0, 0, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  line-height: 1.2;
+  color: var(--color-text-dark);
+}
+
+button {
+  font-family: var(--font-heading);
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Utilities */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-secondary), #6c2bd9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 2rem;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(66, 240, 95, 0.2);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), #2ecc71);
+  color: #0b3d16;
+  padding: 1rem 2.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 1.125rem;
+  font-weight: 800;
+  box-shadow: 0 10px 20px -5px rgba(66, 240, 95, 0.4);
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 15px 30px -8px rgba(66, 240, 95, 0.5);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--color-secondary);
+  border: 2px solid rgba(140, 54, 226, 0.1);
+  padding: 0.8rem 2rem;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-secondary);
+}
+
+/* Animations */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Dark body override removed - conflicts with variable system */
+
+/* Force text colors in dark mode */
+.dark .text-gray-700 {
+  color: #f3f4f6 !important;
+}
+
+/* Main text -> white */
+.dark .text-gray-600 {
+  color: #e5e7eb !important;
+}
+
+/* Secondary -> gray-200 */
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+/* Teritrary -> gray-400 */
+.dark .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+/* Disabled -> gray-500 */
+
+/* Dark specific hex -> white */
+
+/* Update Card for Dark Mode */
+.dark .card {
+  background-color: #1f2937;
+  /* gray-800 */
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  border-color: #374151;
+  /* gray-700 */
+}
+
+.dark .card:hover {
+  border-color: #42f05f;
+}
+
+.dark h1,
+.dark h2,
+.dark h3 {
+  color: #f3f4f6;
+  /* gray-100 */
+}
+
+/* Dark Mode Header/Nav/Aside overrides removed - managed by Tailwind classes in components */
+
+/* Scrollbar adaptation */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: #1f2937;
+}
+
+/* Utility to hide scrollbar but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
