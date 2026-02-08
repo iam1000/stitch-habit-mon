@@ -13,6 +13,9 @@ dist-ssr
 *.local
 # .env
 
+# Service Account (보안)
+# src/md/*.json
+
 # guide
 
 # Editor directories and files

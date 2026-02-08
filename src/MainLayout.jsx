@@ -11,7 +11,8 @@ import {
     Book,
     Moon,
     Sun,
-    Globe
+    Globe,
+    TrendingUp
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -35,7 +36,8 @@ const MainLayout = () => {
         { icon: User, label: t.myMonster, path: '/my-monster' },
         { icon: Trophy, label: t.leaderboard, path: '/leaderboard' },
         { icon: ShoppingBag, label: t.shop, path: '/shop' },
-        { icon: Book, label: 'NotebookLM', path: '/notebooks' },
+{ icon: Book, label: 'NotebookLM', path: '/notebooks' },
+        { icon: TrendingUp, label: t.investment, path: '/investment' },
         { icon: Globe, label: t.friends, path: '/friends' },
     ];
 

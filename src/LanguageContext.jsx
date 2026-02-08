@@ -47,7 +47,60 @@ export const translations = {
         health: "Health",
         power: "Power",
         share: "Share Evolution",
-        backToGame: "Back to Game"
+        backToGame: "Back to Game",
+
+        // Investment Management
+        investment: "Investment",
+        investmentManagement: "Investment Management",
+        investmentDescription: "Track your assets at a glance with Google Sheets integration.",
+        
+        // Investment Tabs
+        investmentList: "Investment List",
+        addInvestment: "Add Investment",
+        connectionSettings: "Connection Settings",
+        
+        // Investment Settings
+        autoConfigured: "Service account credentials are automatically configured",
+        spreadsheetId: "Spreadsheet ID (between /d/ and /edit in URL)",
+        saveSettings: "Save Settings",
+        loadData: "Load Data",
+        
+        // Investment Form
+        addNewItem: "Add New Item",
+        addButton: "Add",
+        date: "Date",
+        category: "Category",
+        name: "Name",
+        quantity: "Quantity",
+        price: "Price",
+        totalAmount: "Total",
+        note: "Note",
+        stock: "Stock",
+        crypto: "Crypto",
+        realEstate: "Real Estate",
+        cash: "Cash",
+        
+        // Investment Filters
+        startDate: "Start Date",
+        endDate: "End Date",
+        all: "All",
+        searchByName: "Search by name...",
+        search: "Search",
+        reset: "Reset",
+        filterConditions: "Filter Conditions",
+        
+        // Messages
+        noData: "No data available. Please set up connection and search.",
+        sheetHeaderNote: "(The first row of the sheet must be: date, category, name, quantity, price, note)",
+        totalItems: "Total",
+        itemsOf: "items",
+        showing: "Showing",
+        nameRequired: "Name and price are required.",
+        dataLoadError: "An error occurred while loading data. Please check your settings or sheet sharing. (Sheet headers must be: date, category, name, quantity, price, note)",
+        dataAddError: "An error occurred while adding data.",
+        dataAddedSuccess: "Data added successfully.",
+        settingsSaved: "Settings saved.",
+        allSettings: "Please enter all settings values.",
     },
     ko: {
         // Landing Page
@@ -93,7 +146,60 @@ export const translations = {
         health: "체력",
         power: "파워",
         share: "진화 공유하기",
-        backToGame: "게임으로 돌아가기"
+        backToGame: "게임으로 돌아가기",
+
+        // Investment Management
+        investment: "투자관리",
+        investmentManagement: "투자 관리",
+        investmentDescription: "구글 시트와 연동하여 자산을 한눈에 파악하세요.",
+        
+        // Investment Tabs
+        investmentList: "투자내역조회",
+        addInvestment: "투자항목 추가",
+        connectionSettings: "연동설정",
+        
+        // Investment Settings
+        autoConfigured: "서비스 계정 인증 정보는 자동으로 설정됩니다",
+        spreadsheetId: "Spreadsheet ID (URL의 /d/와 /edit 사이)",
+        saveSettings: "설정 저장",
+        loadData: "데이터 불러오기",
+        
+        // Investment Form
+        addNewItem: "새 항목 추가",
+        addButton: "추가하기",
+        date: "날짜",
+        category: "분류",
+        name: "종목명",
+        quantity: "수량",
+        price: "단가",
+        totalAmount: "총액",
+        note: "비고",
+        stock: "주식",
+        crypto: "코인",
+        realEstate: "부동산",
+        cash: "현금",
+        
+        // Investment Filters
+        startDate: "시작 날짜",
+        endDate: "종료 날짜",
+        all: "전체",
+        searchByName: "종목명 검색...",
+        search: "조회하기",
+        reset: "초기화",
+        filterConditions: "조회 조건",
+        
+        // Messages
+        noData: "데이터가 없습니다. 연동설정 후 조회해주세요.",
+        sheetHeaderNote: "(시트의 첫 행은 반드시 date, category, name, quantity, price, note 여야 합니다)",
+        totalItems: "총",
+        itemsOf: "개 항목 중",
+        showing: "표시",
+        nameRequired: "종목명과 가격은 필수입니다.",
+        dataLoadError: "데이터를 불러오는 중 오류가 발생했습니다. 설정이나 시트 공유 상태를 확인해주세요. (시트 헤더가 date, category, name, quantity, price, note 여야 합니다)",
+        dataAddError: "데이터 추가 중 오류가 발생했습니다.",
+        dataAddedSuccess: "데이터가 성공적으로 추가되었습니다.",
+        settingsSaved: "설정이 저장되었습니다.",
+        allSettings: "설정(시트 ID, 이메일, 키)을 모두 입력해주세요.",
     }
 };
 
