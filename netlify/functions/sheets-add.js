@@ -1,41 +1,27 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
+import { v4 as uuidv4 } from 'uuid';
 
-exports.handler = async (event, context) => {
-  // CORS 헤더 설정
+export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
-  // OPTIONS 요청 처리 (CORS preflight)
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: '',
-    };
+    return { statusCode: 200, headers, body: '' };
   }
 
-  // POST 요청만 허용
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
-    const { sheetId, clientEmail, privateKey, item } = JSON.parse(event.body);
+    const { sheetId, clientEmail, privateKey, item, sheetName } = JSON.parse(event.body);
 
     if (!sheetId || !clientEmail || !privateKey || !item) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: '모든 설정값을 입력해주세요.' }),
-      };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: '모든 데이터를 입력해주세요.' }) };
     }
 
     const serviceAccountAuth = new JWT({
@@ -46,32 +32,39 @@ exports.handler = async (event, context) => {
 
     const doc = new GoogleSpreadsheet(sheetId, serviceAccountAuth);
     await doc.loadInfo();
-    
-    const sheet = doc.sheetsByIndex[0];
-    
-    // 새 행 추가
-    await sheet.addRow({
-      date: item.date,
-      category: item.category,
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      note: item.note,
-    });
 
-    console.log('✅ Data added successfully:', item);
+    let sheet;
+    if (sheetName) {
+      sheet = doc.sheetsByTitle[sheetName];
+      if (!sheet) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: `시트(${sheetName})가 존재하지 않습니다.` }) };
+      }
+    } else {
+      sheet = doc.sheetsByIndex[0];
+    }
+
+    const newId = uuidv4();
+    const newItem = {
+      ...item,
+      id: newId,
+      ID: newId,
+      uuid: newId,
+      UUID: newId
+    };
+
+    await sheet.addRow(newItem);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, message: 'Data added successfully' }),
+      body: JSON.stringify({ success: true, id: newId }),
     };
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error adding data:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal Server Error', message: error.message }),
+      body: JSON.stringify({ error: '데이터 추가 중 오류가 발생했습니다.', message: error.message }),
     };
   }
 };

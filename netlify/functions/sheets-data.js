@@ -1,41 +1,26 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
 
-exports.handler = async (event, context) => {
-  // CORS 헤더 설정
+export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
-  // OPTIONS 요청 처리 (CORS preflight)
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: '',
-    };
+    return { statusCode: 200, headers, body: '' };
   }
 
-  // POST 요청만 허용
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
-    const { sheetId, clientEmail, privateKey, filters } = JSON.parse(event.body);
+    const { sheetId, clientEmail, privateKey, filters, sheetName } = JSON.parse(event.body);
 
     if (!sheetId || !clientEmail || !privateKey) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: '모든 설정값을 입력해주세요.' }),
-      };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: '모든 설정값을 입력해주세요.' }) };
     }
 
     const serviceAccountAuth = new JWT({
@@ -46,61 +31,81 @@ exports.handler = async (event, context) => {
 
     const doc = new GoogleSpreadsheet(sheetId, serviceAccountAuth);
     await doc.loadInfo();
-    
-    const sheet = doc.sheetsByIndex[0];
-    const rows = await sheet.getRows();
-    
-    let data = rows.map(row => ({
-      date: row.get('date') || '',
-      category: row.get('category') || '',
-      name: row.get('name') || '',
-      quantity: row.get('quantity') || '',
-      price: row.get('price') || '',
-      note: row.get('note') || '',
-    }));
 
-    const originalDataCount = data.length;
-    console.log('📊 Original data count:', originalDataCount);
-    console.log('🔍 Filters received:', JSON.stringify(filters, null, 2));
+    let sheet;
+    if (sheetName) {
+      sheet = doc.sheetsByTitle[sheetName];
+      if (!sheet) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: `시트를 찾을 수 없습니다: ${sheetName}` }) };
+      }
+    } else {
+      sheet = doc.sheetsByIndex[0];
+    }
+
+    const rows = await sheet.getRows();
+    const headerValues = sheet.headerValues;
+
+    let data = rows.map(row => {
+      const rowData = {};
+      headerValues.forEach(header => {
+        rowData[header] = row.get(header) || '';
+      });
+      return rowData;
+    });
 
     // 필터링 적용
     if (filters) {
-      // 날짜 범위 필터
-      if (filters.startDate) {
-        const beforeCount = data.length;
-        data = data.filter(item => item.date >= filters.startDate);
-        console.log(`📅 Start date filter (${filters.startDate}): ${beforeCount} -> ${data.length}`);
+      // 날짜 범위
+      if (headerValues.includes('date')) {
+        if (filters.startDate) {
+          data = data.filter(item => item.date >= filters.startDate);
+        }
+        if (filters.endDate) {
+          data = data.filter(item => item.date <= filters.endDate);
+        }
       }
-      if (filters.endDate) {
-        const beforeCount = data.length;
-        data = data.filter(item => item.date <= filters.endDate);
-        console.log(`📅 End date filter (${filters.endDate}): ${beforeCount} -> ${data.length}`);
-      }
-      
-      // 분류 필터
-      if (filters.category && filters.category !== 'all') {
-        const beforeCount = data.length;
-        data = data.filter(item => item.category === filters.category);
-        console.log(`📂 Category filter (${filters.category}): ${beforeCount} -> ${data.length}`);
-      }
-      
-      // 종목명 검색 (부분 일치)
-      if (filters.searchName) {
-        const beforeCount = data.length;
-        const searchTerm = filters.searchName.toLowerCase();
-        data = data.filter(item => item.name.toLowerCase().includes(searchTerm));
-        console.log(`🔎 Name search filter (${filters.searchName}): ${beforeCount} -> ${data.length}`);
-      }
+
+      // 동적 필터
+      Object.keys(filters).forEach(key => {
+        if (key === 'startDate' || key === 'endDate') return;
+        const filterVal = filters[key];
+
+        if (filterVal && filterVal !== 'all') {
+          // 1. 부분 검색 (이름, 계좌명 등)
+          if (key === 'account_name' || key === 'account_company' || key === 'name') {
+            const term = filterVal.toLowerCase();
+            data = data.filter(item => item[key] && String(item[key]).toLowerCase().includes(term));
+          }
+          // 2. 일치 검색 (카테고리, 유형)
+          else if (key === 'account_type' || key === 'category') {
+            data = data.filter(item => item[key] === filterVal);
+          }
+          // 3. searchName (호환성)
+          else if (key === 'searchName') {
+            if (headerValues.includes('name')) {
+              const term = filterVal.toLowerCase();
+              data = data.filter(item => item['name'] && String(item['name']).toLowerCase().includes(term));
+            } else if (headerValues.includes('account_name')) {
+              const term = filterVal.toLowerCase();
+              data = data.filter(item => item['account_name'] && String(item['account_name']).toLowerCase().includes(term));
+            }
+          }
+          // 4. 그 외 헤더 일치
+          else if (headerValues.includes(key)) {
+            data = data.filter(item => item[key] === filterVal);
+          }
+        }
+      });
     }
 
-    console.log(`✅ Final filtered data count: ${data.length}`);
-
-    // 날짜 기준 내림차순 정렬 (최신 날짜가 먼저)
-    data.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateB - dateA;
-    });
+    // 정렬 (날짜 기준 내림차순)
+    if (headerValues.includes('date')) {
+      data.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA;
+      });
+    }
 
     return {
       statusCode: 200,
@@ -108,11 +113,11 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ data }),
     };
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error loading data:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal Server Error', message: error.message }),
+      body: JSON.stringify({ error: '데이터를 불러오는 중 오류가 발생했습니다.', message: error.message }),
     };
   }
 };
