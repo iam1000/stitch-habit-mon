@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit } from 'lucide-react';
 
 const Investment = () => {
@@ -390,12 +390,23 @@ const Investment = () => {
       return rowData;
     });
 
-    // 워크시트 생성
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    // ExcelJS를 사용한 워크북 및 워크시트 생성
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Sheet1');
 
-    // 워크북 생성 및 시트 추가
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    // 컬럼 정의
+    if (exportData.length > 0) {
+      worksheet.columns = Object.keys(exportData[0]).map(key => ({
+        header: key,
+        key: key,
+        width: 15
+      }));
+
+      // 데이터 추가
+      exportData.forEach(row => {
+        worksheet.addRow(row);
+      });
+    }
 
     // 파일명 생성
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -403,7 +414,15 @@ const Investment = () => {
     const fileName = `${prefix}_${dateStr}.xlsx`;
 
     // 다운로드 실행
-    XLSX.writeFile(wb, fileName);
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    });
   };
 
   // 페이지 변경 핸들러
