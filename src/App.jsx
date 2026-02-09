@@ -13,6 +13,7 @@ import Settings from './Settings';       // 설정 화면
 import Notebooks from './Notebooks';     // 노트북(학습) 화면
 import Friends from './Friends';         // 친구 화면
 import Investment from './Investment';   // 투자관리 화면
+import CodeManagement from './CodeManagement'; // 코드관리 화면
 import { LanguageProvider } from './LanguageContext'; // 다국어 지원 (한국어/영어)
 import { AuthProvider } from './AuthContext';         // 사용자 인증 (로그인 상태)
 import { ThemeProvider } from './ThemeContext';       // 테마 (다크모드/라이트모드)
@@ -54,11 +55,14 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                   {/* 노트북 */}
                   <Route path="/notebooks" element={<Notebooks />} />
-{/* 친구 */}
+                  {/* 친구 */}
                   <Route path="/friends" element={<Friends />} />
 
                   {/* 투자관리 */}
                   <Route path="/investment" element={<Investment />} />
+
+                  {/* 코드관리 */}
+                  <Route path="/codes" element={<CodeManagement />} />
 
                 </Route>
 

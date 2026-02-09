@@ -12,7 +12,8 @@ import {
     Moon,
     Sun,
     Globe,
-    TrendingUp
+    TrendingUp,
+    Tag
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -36,7 +37,7 @@ const MainLayout = () => {
         { icon: User, label: t.myMonster, path: '/my-monster' },
         { icon: Trophy, label: t.leaderboard, path: '/leaderboard' },
         { icon: ShoppingBag, label: t.shop, path: '/shop' },
-{ icon: Book, label: 'NotebookLM', path: '/notebooks' },
+        { icon: Book, label: 'NotebookLM', path: '/notebooks' },
         { icon: TrendingUp, label: t.investment, path: '/investment' },
         { icon: Globe, label: t.friends, path: '/friends' },
     ];
@@ -46,7 +47,10 @@ const MainLayout = () => {
         const currentPath = location.pathname;
 
         // If visiting a page not in tabs (e.g. from direct URL), add it
-        const allItems = [...menuItems, { icon: Settings, label: t.settings, path: '/settings' }];
+        const allItems = [...menuItems,
+        { icon: Settings, label: t.settings, path: '/settings' },
+        { icon: Tag, label: 'Code Management', path: '/codes' }
+        ];
 
         if (allItems.some(item => item.path === currentPath)) {
             const menuItem = allItems.find(item => item.path === currentPath);
@@ -63,7 +67,10 @@ const MainLayout = () => {
 
     // Update tab labels when language changes
     useEffect(() => {
-        const allItems = [...menuItems, { icon: Settings, label: t.settings, path: '/settings' }];
+        const allItems = [...menuItems,
+        { icon: Settings, label: t.settings, path: '/settings' },
+        { icon: Tag, label: t.codeMgt, path: '/codes' }
+        ];
 
         setTabs(prev => prev.map(tab => {
             const item = allItems.find(i => i.path === tab.id);
@@ -126,6 +133,13 @@ const MainLayout = () => {
                 </nav>
 
                 <div className="space-y-2">
+                    <button
+                        onClick={() => handleMenuClick('/codes')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === '/codes' ? 'bg-purple-50 dark:bg-purple-900/20 text-[#8c36e2] dark:text-purple-400 font-semibold' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                    >
+                        <Tag className="w-5 h-5" />
+                        {t.codeMgt}
+                    </button>
                     <button
                         onClick={() => handleMenuClick('/settings')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === '/settings' ? 'bg-purple-50 dark:bg-purple-900/20 text-[#8c36e2] dark:text-purple-400 font-semibold' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
