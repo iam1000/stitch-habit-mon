@@ -46,13 +46,15 @@ const Investment = () => {
       data: [],
       originalData: [],
       filters: { ...defaultFilters },
-      sortConfig: { ...defaultSort }
+      sortConfig: { ...defaultSort },
+      pagination: { currentPage: 1, itemsPerPage: 10 }
     },
     accounts_list: {
       data: [],
       originalData: [],
       filters: { ...defaultFilters },
-      sortConfig: { ...defaultSort }
+      sortConfig: { ...defaultSort },
+      pagination: { currentPage: 1, itemsPerPage: 10 }
     }
   });
 
@@ -75,6 +77,14 @@ const Investment = () => {
   const currentData = viewState[currentViewKey]?.data || [];
   const currentFilters = viewState[currentViewKey]?.filters || defaultFilters;
   const currentSort = viewState[currentViewKey]?.sortConfig || defaultSort;
+  const currentPagination = viewState[currentViewKey]?.pagination || { currentPage: 1, itemsPerPage: 10 };
+
+  // 페이지네이션 계산
+  const totalItems = currentData.length;
+  const totalPages = Math.ceil(totalItems / currentPagination.itemsPerPage);
+  const startIndex = (currentPagination.currentPage - 1) * currentPagination.itemsPerPage;
+  const endIndex = startIndex + currentPagination.itemsPerPage;
+  const paginatedData = currentData.slice(startIndex, endIndex);
 
   // 현재 활성화된 시트 설정 가져오기
   const getCurrentSheetConfig = () => {
@@ -143,7 +153,8 @@ const Investment = () => {
           ...prev[currentViewKey],
           data: result.data,
           originalData: result.data,
-          sortConfig: { key: null, direction: null }
+          sortConfig: { key: null, direction: null },
+          pagination: { ...prev[currentViewKey].pagination, currentPage: 1 } // 데이터 로드 시 1페이지로 리셋
         }
       }));
 
@@ -181,6 +192,13 @@ const Investment = () => {
 
   // 필터 적용 (조회 버튼)
   const applyFilters = () => {
+    setViewState(prev => ({
+      ...prev,
+      [currentViewKey]: {
+        ...prev[currentViewKey],
+        pagination: { ...prev[currentViewKey].pagination, currentPage: 1 }
+      }
+    }));
     loadData();
   };
 
@@ -190,7 +208,8 @@ const Investment = () => {
       ...prev,
       [currentViewKey]: {
         ...prev[currentViewKey],
-        filters: { ...defaultFilters }
+        filters: { ...defaultFilters },
+        pagination: { ...prev[currentViewKey].pagination, currentPage: 1 }
       }
     }));
     setTimeout(() => {
@@ -239,7 +258,8 @@ const Investment = () => {
       [currentViewKey]: {
         ...prev[currentViewKey],
         sortConfig: { key: direction ? key : null, direction },
-        data: sortedData
+        data: sortedData,
+        pagination: { ...prev[currentViewKey].pagination, currentPage: 1 } // 정렬 시 1페이지로 (선택사항)
       }
     }));
   };
@@ -386,7 +406,30 @@ const Investment = () => {
     XLSX.writeFile(wb, fileName);
   };
 
-  // 입력 핸들러
+  // 페이지 변경 핸들러
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setViewState(prev => ({
+      ...prev,
+      [currentViewKey]: {
+        ...prev[currentViewKey],
+        pagination: { ...prev[currentViewKey].pagination, currentPage: newPage }
+      }
+    }));
+  };
+
+  // 페이지당 항목 수 변경 핸들러
+  const handleItemsPerPageChange = (e) => {
+    const newItemsPerPage = Number(e.target.value);
+    setViewState(prev => ({
+      ...prev,
+      [currentViewKey]: {
+        ...prev[currentViewKey],
+        pagination: { currentPage: 1, itemsPerPage: newItemsPerPage }
+      }
+    }));
+  };
+
   const handleInputChange = (key, value) => {
     setNewItem(prev => ({ ...prev, [key]: value }));
   };
@@ -578,7 +621,7 @@ const Investment = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentData.map((row, idx) => (
+                    {paginatedData.map((row, idx) => (
                       <tr key={idx} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         {currentConfig?.columns.map(col => (
                           <td key={col.key} className="p-4 text-sm text-[var(--text-main)]">
@@ -606,9 +649,64 @@ const Investment = () => {
                 </table>
               </div>
             )}
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 text-right">
-              {t.totalItems} <span className="font-semibold text-[var(--primary)]">{currentData.length}</span> {t.itemsOf}
-            </div>
+
+            {/* 페이지네이션 컨트롤 */}
+            {!loading && currentData.length > 0 && (
+              <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Show</span>
+                  <select
+                    value={currentPagination.itemsPerPage}
+                    onChange={handleItemsPerPageChange}
+                    className="p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-gray-500">items per page</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="mr-2 text-gray-500">
+                    {startIndex + 1}-{Math.min(endIndex, totalItems)} of {totalItems}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handlePageChange(currentPagination.currentPage - 1)}
+                      disabled={currentPagination.currentPage === 1}
+                      className="px-3 py-1 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Prev
+                    </button>
+                    {/* 간단한 페이지 번호 표시 (1..N) - 너무 많으면 생략 로직 필요하나 일단 전체 표시 */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // 현재 페이지 주변 5개 보여주기 로직 (간단하게 1~5만 보여주는건 아님)
+                      // 여기서는 간단히 전체 페이지 중 일부만 보여주거나, select로 이동하게 하는게 나음.
+                      // 일단은 Prev/Next만 있어도 되지만, 숫자 버튼 몇개 추가.
+                      let p = i + 1;
+                      if (totalPages > 5) {
+                        if (currentPagination.currentPage > 3) p = currentPagination.currentPage - 2 + i;
+                        if (p > totalPages) p = p - (p - totalPages);
+                        // 복잡하니 여기서는 심플하게 갈게요: Current Page 표시만.
+                      }
+                      return null;
+                    })}
+                    <span className="px-2 font-medium text-[var(--text-main)]">
+                      Page {currentPagination.currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPagination.currentPage + 1)}
+                      disabled={currentPagination.currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
