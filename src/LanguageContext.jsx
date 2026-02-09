@@ -53,18 +53,18 @@ export const translations = {
         investment: "Investment",
         investmentManagement: "Investment Management",
         investmentDescription: "Track your assets at a glance with Google Sheets integration.",
-        
+
         // Investment Tabs
         investmentList: "Investment List",
         addInvestment: "Add Investment",
         connectionSettings: "Connection Settings",
-        
+
         // Investment Settings
         autoConfigured: "Service account credentials are automatically configured",
         spreadsheetId: "Spreadsheet ID (between /d/ and /edit in URL)",
         saveSettings: "Save Settings",
         loadData: "Load Data",
-        
+
         // Investment Form
         addNewItem: "Add New Item",
         addButton: "Add",
@@ -79,7 +79,7 @@ export const translations = {
         crypto: "Crypto",
         realEstate: "Real Estate",
         cash: "Cash",
-        
+
         // Investment Filters
         startDate: "Start Date",
         endDate: "End Date",
@@ -88,7 +88,7 @@ export const translations = {
         search: "Search",
         reset: "Reset",
         filterConditions: "Filter Conditions",
-        
+
         // Messages
         noData: "No data available. Please set up connection and search.",
         sheetHeaderNote: "(The first row of the sheet must be: date, category, name, quantity, price, note)",
@@ -101,6 +101,26 @@ export const translations = {
         dataAddedSuccess: "Data added successfully.",
         settingsSaved: "Settings saved.",
         allSettings: "Please enter all settings values.",
+
+        // Accounts Management
+        accountList: "Accounts Management",
+        addAccount: "Add Account Info",
+        accountId: "Account ID",
+        accountName: "Account Name",
+        financialCompany: "Financial Company",
+        accountType: "Account Type",
+        accountNumber: "Account Number",
+        deposit: "Deposit/Withdrawal",
+        savings: "Savings",
+        loan: "Loan",
+        financialInstitute: "Financial Institute",
+
+        // Account Types (Partial)
+        ISA: "ISA",
+        Pension: "Pension",
+        StockAccount: "Stock Account",
+        General: "General",
+        CMA: "CMA",
     },
     ko: {
         // Landing Page
@@ -152,18 +172,18 @@ export const translations = {
         investment: "투자관리",
         investmentManagement: "투자 관리",
         investmentDescription: "구글 시트와 연동하여 자산을 한눈에 파악하세요.",
-        
+
         // Investment Tabs
         investmentList: "투자내역조회",
         addInvestment: "투자항목 추가",
         connectionSettings: "연동설정",
-        
+
         // Investment Settings
         autoConfigured: "서비스 계정 인증 정보는 자동으로 설정됩니다",
         spreadsheetId: "Spreadsheet ID (URL의 /d/와 /edit 사이)",
         saveSettings: "설정 저장",
         loadData: "데이터 불러오기",
-        
+
         // Investment Form
         addNewItem: "새 항목 추가",
         addButton: "추가하기",
@@ -178,7 +198,7 @@ export const translations = {
         crypto: "코인",
         realEstate: "부동산",
         cash: "현금",
-        
+
         // Investment Filters
         startDate: "시작 날짜",
         endDate: "종료 날짜",
@@ -187,9 +207,9 @@ export const translations = {
         search: "조회하기",
         reset: "초기화",
         filterConditions: "조회 조건",
-        
+
         // Messages
-        noData: "데이터가 없습니다. 연동설정 후 조회해주세요.",
+        noData: "조회 버튼을 눌러 데이터를 불러와주세요.",
         sheetHeaderNote: "(시트의 첫 행은 반드시 date, category, name, quantity, price, note 여야 합니다)",
         totalItems: "총",
         itemsOf: "개 항목 중",
@@ -200,6 +220,26 @@ export const translations = {
         dataAddedSuccess: "데이터가 성공적으로 추가되었습니다.",
         settingsSaved: "설정이 저장되었습니다.",
         allSettings: "설정(시트 ID, 이메일, 키)을 모두 입력해주세요.",
+
+        // Accounts Management
+        accountList: "계좌 관리",
+        addAccount: "계좌정보 추가",
+        accountId: "계좌ID",
+        accountName: "계좌명",
+        financialCompany: "금융기관",
+        accountType: "계좌유형",
+        accountNumber: "계좌번호",
+        deposit: "입출금",
+        savings: "예적금",
+        loan: "대출",
+        financialInstitute: "금융기관",
+
+        // Account Types
+        ISA: "ISA",
+        "연금": "연금",
+        "증권계좌": "증권계좌",
+        "일반": "일반",
+        "CMA": "CMA",
     }
 };
 
