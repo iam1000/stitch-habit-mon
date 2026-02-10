@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
 import ExcelJS from 'exceljs';
 import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit } from 'lucide-react';
+import { useDataMapper } from './hooks/useDataMapper';
 
 const Investment = () => {
   const { t } = useLanguage();
@@ -20,7 +21,7 @@ const Investment = () => {
     }
   }, []);
 
-  // 탭 상태: 'list' | 'add' | 'accounts_list' | 'accounts_add' | 'settings'
+  // 탭 상태: 'list' | 'add' | 'accounts_list' | 'accounts_add' | 'accounts_code_mapped' | 'settings'
   const [activeTab, setActiveTab] = useState('list');
 
   // 설정 (기본값 로드)
@@ -55,6 +56,13 @@ const Investment = () => {
       filters: { ...defaultFilters },
       sortConfig: { ...defaultSort },
       pagination: { currentPage: 1, itemsPerPage: 10 }
+    },
+    accounts_code_mapped: {
+      data: [],
+      originalData: [],
+      filters: { ...defaultFilters },
+      sortConfig: { ...defaultSort },
+      pagination: { currentPage: 1, itemsPerPage: 10 }
     }
   });
 
@@ -70,8 +78,8 @@ const Investment = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // 현재 활성화된 화면의 키 구하기 (list 혹은 accounts_list)
-  const currentViewKey = activeTab === 'accounts_list' ? 'accounts_list' : 'list';
+  // 현재 활성화된 화면의 키 구하기
+  const currentViewKey = (activeTab === 'accounts_list' || activeTab === 'accounts_code_mapped') ? activeTab : 'list';
 
   // 뷰 상태 접근 헬퍼
   const currentData = viewState[currentViewKey]?.data || [];
@@ -90,7 +98,7 @@ const Investment = () => {
   const getCurrentSheetConfig = () => {
     if (activeTab === 'list' || activeTab === 'add') {
       return sheetConfig.find(c => c.id === 'INVESTMENT');
-    } else if (activeTab === 'accounts_list' || activeTab === 'accounts_add') {
+    } else if (activeTab === 'accounts_list' || activeTab === 'accounts_add' || activeTab === 'accounts_code_mapped') {
       return sheetConfig.find(c => c.id === 'ACCOUNTS');
     }
     return null;
@@ -107,10 +115,85 @@ const Investment = () => {
   // 뷰 상태 업데이트 헬퍼
   // (Not used directly but concept remains)
 
+  // 계좌 유형 코드 매핑 상태 (신규 탭 전용)
+  // 매핑 훅 사용 (ACCOUNTS_MANAGER 화면용)
+  const {
+    getMappedValue: getMappedAccountType,
+    getReferenceOptions: getAccountTypeOptions,
+    reloadRefData: reloadAccountTypeMapper
+  } = useDataMapper('ACCOUNTS_MANAGER');
+
+  // 탭 변경 시 매핑 데이터 리로드 (코드 변경 반영)
+  useEffect(() => {
+    if (activeTab === 'accounts_code_mapped') {
+      reloadAccountTypeMapper();
+    }
+  }, [activeTab, reloadAccountTypeMapper]);
+
+
+  // 매핑 훅 사용 (INVESTMENT_LIST 화면용) - 투자내역의 category(계좌ID) -> 계좌명 매핑
+  const {
+    getMappedValue: getMappedCategory,
+    getReferenceOptions: getCategoryOptions,
+    reloadRefData: reloadCategoryMapper
+  } = useDataMapper('INVESTMENT_LIST');
+
+  // 탭 변경 시 매핑 데이터 최신화 (list 탭 & add 탭)
+  useEffect(() => {
+    if (activeTab === 'list' || activeTab === 'add') {
+      reloadCategoryMapper();
+    }
+  }, [activeTab, reloadCategoryMapper]);
+
+  const loadAccountTypeCodes = async () => {
+    if (!sheetId || !clientEmail || !privateKey) return;
+
+    try {
+      const apiUrl = import.meta.env.DEV
+        ? 'http://localhost:3001/api/sheets/data'
+        : '/.netlify/functions/sheets-data';
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sheetId,
+          clientEmail,
+          privateKey,
+          sheetName: 'CODES' // CODES 시트 조회
+        }),
+      });
+
+      if (!response.ok) throw new Error('CODES Load Failed');
+      const result = await response.json();
+
+      if (result.data && Array.isArray(result.data)) {
+        // 'ACCOUNT_TYPE' 그룹이고 'Y'인 항목만 필터링 + 정렬
+        const filtered = result.data
+          .filter(item => item.group_code === 'ACCOUNT_TYPE' && item.use_yn === 'Y')
+          .sort((a, b) => Number(a.order || 999) - Number(b.order || 999));
+        setAccountTypeCodes(filtered);
+      }
+    } catch (e) {
+      console.error("Failed to load account type codes", e);
+    }
+  };
+
+
+
   // 데이터 로드
   const loadData = async () => {
     // 설정 탭에서는 로드 안함
     if (activeTab === 'settings' || !currentConfig) return;
+
+    // 매핑 데이터도 리로드 (계좌관리-코드 탭용) - 조회/리프레시 버튼 클릭 시 반영됨
+    if (activeTab === 'accounts_code_mapped') {
+      reloadAccountTypeMapper();
+    }
+    // 투자내역 탭이면 카테고리 매핑 데이터 리로드
+    if (activeTab === 'list') {
+      reloadCategoryMapper();
+    }
 
     if (!sheetId || !clientEmail || !privateKey) {
       setError(t.allSettings);
@@ -306,7 +389,7 @@ const Investment = () => {
 
       if (activeTab === 'add') {
         setActiveTab('list');
-      } else if (activeTab === 'accounts_list' || activeTab === 'list') {
+      } else if (activeTab === 'accounts_list' || activeTab === 'list' || activeTab === 'accounts_code_mapped') {
         // 목록 화면(계좌, 투자내역)에서 인라인 추가/수정 시
         loadData();
         // 인라인 폼 닫기
@@ -410,7 +493,7 @@ const Investment = () => {
 
     // 파일명 생성
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const prefix = activeTab === 'list' ? '투자내역' : '계좌목록';
+    const prefix = activeTab === 'list' ? '투자내역' : (activeTab.includes('accounts') ? '계좌목록' : '데이터');
     const fileName = `${prefix}_${dateStr}.xlsx`;
 
     // 다운로드 실행
@@ -472,6 +555,9 @@ const Investment = () => {
         <button onClick={() => setActiveTab('accounts_list')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'accounts_list' ? 'bg-[var(--primary)] text-white font-medium' : 'text-gray-500 hover:text-[var(--primary)] hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
           <CreditCard size={18} /> {t.accountList}
         </button>
+        <button onClick={() => setActiveTab('accounts_code_mapped')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'accounts_code_mapped' ? 'bg-indigo-600 text-white font-medium' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+          <CreditCard size={18} /> 계좌 관리(코드)
+        </button>
         <div className="flex-grow"></div>
         <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'settings' ? 'bg-gray-700 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
           <Settings size={18} /> {t.connectionSettings}
@@ -495,8 +581,8 @@ const Investment = () => {
         </div>
       )}
 
-      {/* 목록 조회 탭 (List View) */}
-      {(activeTab === 'list' || activeTab === 'accounts_list') && (
+      {/* 목록 조회 탭 (List View & Code Mapped View) */}
+      {(activeTab === 'list' || activeTab === 'accounts_list' || activeTab === 'accounts_code_mapped') && (
         <div className="space-y-6 animate-fade-in">
           {/* 필터 섹션 */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -517,9 +603,15 @@ const Investment = () => {
                   {currentConfig?.columns.find(c => c.key === 'category') && (
                     <select value={currentFilters.category} onChange={(e) => handleFilterChange('category', e.target.value)} className="p-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                       <option value="all">{t.all}</option>
-                      {currentConfig.columns.find(c => c.key === 'category').options?.map(opt => (
-                        <option key={opt} value={opt}>{t[opt] || opt}</option>
-                      ))}
+                      {/* 카테고리(계좌) 동적 매핑 옵션 */}
+                      {getCategoryOptions('category').length > 0
+                        ? getCategoryOptions('category').map(cat => (
+                          <option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>
+                        ))
+                        : currentConfig.columns.find(c => c.key === 'category').options?.map(opt => (
+                          <option key={opt} value={opt}>{t[opt] || opt}</option>
+                        ))
+                      }
                     </select>
                   )}
                   {/* 종목명 검색 */}
@@ -555,6 +647,29 @@ const Investment = () => {
                 </>
               )}
 
+              {/* --- 3. 계좌관리 (코드) 필터 (신규, 매핑 적용) --- */}
+              {activeTab === 'accounts_code_mapped' && (
+                <>
+                  {/* 계좌 유형 (동적 매핑) */}
+                  <select value={currentFilters.account_type} onChange={(e) => handleFilterChange('account_type', e.target.value)} className="p-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 min-w-[120px]">
+                    <option value="all">전체 유형</option>
+                    {getAccountTypeOptions('account_type').map(code => (
+                      <option key={code.code_id} value={code.code_id}>{code.code_name}</option>
+                    ))}
+                  </select>
+
+                  {/* 계좌명 */}
+                  <div className="relative flex-grow max-w-[200px]">
+                    <input type="text" value={currentFilters.account_name} onChange={(e) => handleFilterChange('account_name', e.target.value)} placeholder="계좌명 검색" className="w-full p-2 pl-3 pr-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                  </div>
+
+                  {/* 금융기관 */}
+                  <div className="relative flex-grow max-w-[200px]">
+                    <input type="text" value={currentFilters.account_company} onChange={(e) => handleFilterChange('account_company', e.target.value)} placeholder="금융기관 검색" className="w-full p-2 pl-3 pr-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                  </div>
+                </>
+              )}
+
               <div className="flex gap-2 ml-auto">
                 <button onClick={applyFilters} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
                   <RefreshCw size={16} /> {t.search}
@@ -565,7 +680,7 @@ const Investment = () => {
                 <button onClick={handleDownloadExcel} className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 whitespace-nowrap">
                   <Download size={16} /> 엑셀 다운로드
                 </button>
-                {activeTab === 'accounts_list' && (
+                {activeTab.includes('accounts') && (
                   <button onClick={() => setIsInlineAdding(!isInlineAdding)} className="px-4 py-2 bg-[var(--primary)] text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
                     {isInlineAdding ? <filter size={16} /> : <Plus size={16} />} {isEditMode ? '수정 취소' : '항목추가'}
                   </button>
@@ -578,7 +693,7 @@ const Investment = () => {
           {error && (<div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200 text-sm">{error}</div>)}
 
           {/* 인라인 항목 추가 폼 (계좌관리 & 투자내역 수정 공용) */}
-          {((activeTab === 'accounts_list' || activeTab === 'list') && isInlineAdding) && (
+          {((activeTab === 'accounts_list' || activeTab === 'list' || activeTab === 'accounts_code_mapped') && isInlineAdding) && (
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-indigo-100 dark:border-gray-700 animate-slide-down">
               <h3 className="text-lg font-bold text-[var(--text-main)] mb-4 flex items-center gap-2">
                 {isEditMode ? <Edit size={20} className="text-[var(--primary)]" /> : <PlusCircle size={20} className="text-[var(--primary)]" />}
@@ -593,7 +708,14 @@ const Investment = () => {
                     {col.type === 'select' ? (
                       <select value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none">
                         <option value="">Select...</option>
-                        {col.options.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))}
+                        {/* 계좌관리(코드) 탭이고, 현재 컬럼이 account_type이면 동적 옵션 사용 */}
+                        {/* 계좌관리(코드) 탭이고, 현재 컬럼이 account_type이면 동적 옵션 사용 */}
+                        {(activeTab === 'accounts_code_mapped' && col.key === 'account_type')
+                          ? getAccountTypeOptions('account_type').map(code => (<option key={code.code_id} value={code.code_id}>{code.code_name}</option>))
+                          : (activeTab === 'list' && col.key === 'category')
+                            ? getCategoryOptions('category').map(cat => (<option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>))
+                            : col.options.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))
+                        }
                       </select>
                     ) : (
                       <input type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'} value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t[col.labelKey] || col.labelKey} />
@@ -646,6 +768,15 @@ const Investment = () => {
                           <td key={col.key} className="p-4 text-sm text-[var(--text-main)]">
                             {(() => {
                               const val = row[col.key];
+                              // 신규 탭: 계좌유형 코드 매핑 표시
+                              if (activeTab === 'accounts_code_mapped' && col.key === 'account_type') {
+                                return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{getMappedAccountType('account_type', val)}</span>);
+                              }
+                              // 투자내역 탭: 카테고리(계좌) 매핑 표시
+                              if (activeTab === 'list' && col.key === 'category') {
+                                return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{getMappedCategory('category', val)}</span>);
+                              }
+
                               if (col.type === 'number') return Number(val).toLocaleString();
                               if (col.type === 'select') return (<span className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300`}>{val}</span>);
                               return val || '-';
@@ -749,7 +880,10 @@ const Investment = () => {
                 {col.type === 'select' ? (
                   <select value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     <option value="">Select...</option>
-                    {col.options.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))}
+                    {(col.key === 'category' && getCategoryOptions('category').length > 0)
+                      ? getCategoryOptions('category').map(cat => (<option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>))
+                      : col.options.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))
+                    }
                   </select>
                 ) : (
                   <input type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'} value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder={t[col.labelKey] || col.labelKey} />

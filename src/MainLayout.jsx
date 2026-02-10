@@ -18,6 +18,9 @@ import {
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
+import Dashboard from './Dashboard';
+import Investment from './Investment';
+import CodeManagement from './CodeManagement';
 
 const MainLayout = () => {
     const navigate = useNavigate();
@@ -207,7 +210,21 @@ const MainLayout = () => {
 
                 {/* Content Viewport */}
                 <div className="flex-1 overflow-y-auto transition-colors duration-200 bg-[var(--bg-main)]">
-                    <Outlet />
+                    {/* Persistent Views: Rendered always but toggled via CSS */}
+                    <div style={{ display: location.pathname === '/dashboard' ? 'block' : 'none', height: '100%' }}>
+                        <Dashboard />
+                    </div>
+                    <div style={{ display: location.pathname === '/investment' ? 'block' : 'none', height: '100%' }}>
+                        <Investment />
+                    </div>
+                    <div style={{ display: location.pathname === '/codes' ? 'block' : 'none', height: '100%' }}>
+                        <CodeManagement />
+                    </div>
+
+                    {/* Non-persistent Views (via Outlet) */}
+                    {!['/dashboard', '/investment', '/codes'].includes(location.pathname) && (
+                        <Outlet />
+                    )}
                 </div>
             </div>
         </div>
