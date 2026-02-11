@@ -20,6 +20,7 @@ import { ThemeProvider } from './ThemeContext';       // 테마 (다크모드/�
 
 // 공통 레이아웃 컴포넌트 (네비게이션 바 등이 포함된 틀)
 import MainLayout from './MainLayout';
+import ProtectedRoute from './ProtectedRoute'; // 새로 만든 검문소 (로그인 체크)
 
 function App() {
   return (
@@ -38,32 +39,37 @@ function App() {
                 {/* 기본 경로(/)는 랜딩 페이지를 보여줍니다. */}
                 <Route path="/" element={<LandingPage />} />
 
-                {/* 로그인 경로(/login)는 로그인 페이지를 보여줍니다. */}
+
+
+                {/* 로그인 경로(/login)는 누구나 접근 가능 */}
                 <Route path="/login" element={<Login />} />
 
-                {/* 중첩 라우팅: MainLayout(상단/하단 탭바)이 적용되는 페이지들입니다. */}
-                <Route element={<MainLayout />}>
-                  {/* 대시보드 */}
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  {/* 상점 */}
-                  <Route path="/shop" element={<Shop />} />
-                  {/* 내 몬스터 */}
-                  <Route path="/my-monster" element={<MyMonster />} />
-                  {/* 랭킹 */}
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  {/* 설정 */}
-                  <Route path="/settings" element={<Settings />} />
-                  {/* 노트북 */}
-                  <Route path="/notebooks" element={<Notebooks />} />
-                  {/* 친구 */}
-                  <Route path="/friends" element={<Friends />} />
+                {/* [보안 라우트] 🔒 검문소 설치 (로그인해야만 통과) */}
+                <Route element={<ProtectedRoute />}>
+                  {/* 중첩 라우팅: MainLayout(상단/하단 탭바)이 적용되는 페이지들입니다. */}
+                  <Route element={<MainLayout />}>
+                    {/* 대시보드 */}
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    {/* 상점 */}
+                    <Route path="/shop" element={<Shop />} />
+                    {/* 내 몬스터 */}
+                    <Route path="/my-monster" element={<MyMonster />} />
+                    {/* 랭킹 */}
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    {/* 설정 */}
+                    <Route path="/settings" element={<Settings />} />
+                    {/* 노트북 */}
+                    <Route path="/notebooks" element={<Notebooks />} />
+                    {/* 친구 */}
+                    <Route path="/friends" element={<Friends />} />
 
-                  {/* 투자관리 */}
-                  <Route path="/investment" element={<Investment />} />
+                    {/* 투자관리 */}
+                    <Route path="/investment" element={<Investment />} />
 
-                  {/* 코드관리 */}
-                  <Route path="/codes" element={<CodeManagement />} />
+                    {/* 코드관리 */}
+                    <Route path="/codes" element={<CodeManagement />} />
 
+                  </Route>
                 </Route>
 
                 {/* 진화 화면은 레이아웃 없이 전체 화면으로 보여줍니다. */}

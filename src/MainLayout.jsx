@@ -210,16 +210,22 @@ const MainLayout = () => {
 
                 {/* Content Viewport */}
                 <div className="flex-1 overflow-y-auto transition-colors duration-200 bg-[var(--bg-main)]">
-                    {/* Persistent Views: Rendered always but toggled via CSS */}
-                    <div style={{ display: location.pathname === '/dashboard' ? 'block' : 'none', height: '100%' }}>
-                        <Dashboard />
-                    </div>
-                    <div style={{ display: location.pathname === '/investment' ? 'block' : 'none', height: '100%' }}>
-                        <Investment />
-                    </div>
-                    <div style={{ display: location.pathname === '/codes' ? 'block' : 'none', height: '100%' }}>
-                        <CodeManagement />
-                    </div>
+                    {/* Persistent Views: Rendered ONLY if in tabs (allows state reset on close), visible via CSS */}
+                    {tabs.some(tab => tab.id === '/dashboard') && (
+                        <div style={{ display: location.pathname === '/dashboard' ? 'block' : 'none', height: '100%' }}>
+                            <Dashboard />
+                        </div>
+                    )}
+                    {tabs.some(tab => tab.id === '/investment') && (
+                        <div style={{ display: location.pathname === '/investment' ? 'block' : 'none', height: '100%' }}>
+                            <Investment />
+                        </div>
+                    )}
+                    {tabs.some(tab => tab.id === '/codes') && (
+                        <div style={{ display: location.pathname === '/codes' ? 'block' : 'none', height: '100%' }}>
+                            <CodeManagement />
+                        </div>
+                    )}
 
                     {/* Non-persistent Views (via Outlet) */}
                     {!['/dashboard', '/investment', '/codes'].includes(location.pathname) && (

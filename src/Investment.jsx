@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
 import ExcelJS from 'exceljs';
-import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit } from 'lucide-react';
+import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit, X, Check } from 'lucide-react';
 import { useDataMapper } from './hooks/useDataMapper';
 
 const Investment = () => {
@@ -77,6 +77,7 @@ const Investment = () => {
   // 수정 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({}); // 인라인 행 수정용 상태
 
   // 현재 활성화된 화면의 키 구하기
   const currentViewKey = (activeTab === 'accounts_list' || activeTab === 'accounts_code_mapped') ? activeTab : 'list';
@@ -347,11 +348,16 @@ const Investment = () => {
     }));
   };
 
-  // 데이터 추가/수정
-  const addData = async () => {
+
+
+  // 통합 데이터 저장 (추가/수정)
+  const saveData = async (itemData = newItem, isUpdate = false, targetId = null) => {
     if (!currentConfig) return;
 
-    const isUpdate = isEditMode && editId;
+    // 레거시 호환 (Add 탭 등에서 호출 시)
+    if (isUpdate === undefined) isUpdate = isEditMode;
+    if (targetId === undefined) targetId = editId;
+
     const itemsEndpoint = isUpdate ? 'update' : 'add';
     const method = isUpdate ? 'PUT' : 'POST';
 
@@ -364,12 +370,12 @@ const Investment = () => {
         sheetId,
         clientEmail,
         privateKey,
-        item: newItem,
+        item: itemData,
         sheetName: currentConfig.sheetName
       };
 
       if (isUpdate) {
-        bodyPayload.uuid = editId;
+        bodyPayload.uuid = targetId;
       }
 
       const response = await fetch(apiUrl, {
@@ -378,29 +384,52 @@ const Investment = () => {
         body: JSON.stringify(bodyPayload),
       });
 
-      if (!response.ok) {
-        throw new Error(isUpdate ? t.dataAddError : t.dataAddError); // Use generic error or specific
+      if (!response.ok) throw new Error(t.dataAddError);
+
+      // 성공 처리
+      if (isUpdate) {
+        setEditForm({});
+        setEditId(null);
+        // 리스트 내 수정인 경우 editMode 해제하지 않음 (다른 행 수정 가능성 고려)
+      } else {
+        setNewItem({});
+        alert(t.dataAddedSuccess);
       }
 
-      alert(isUpdate ? '수정되었습니다.' : t.dataAddedSuccess);
-      setNewItem({});
-      setIsEditMode(false);
-      setEditId(null);
-
+      // 데이터 리로드 및 탭 전환 로직
       if (activeTab === 'add') {
         setActiveTab('list');
-      } else if (activeTab === 'accounts_list' || activeTab === 'list' || activeTab === 'accounts_code_mapped') {
-        // 목록 화면(계좌, 투자내역)에서 인라인 추가/수정 시
-        loadData();
-        // 인라인 폼 닫기
-        setIsInlineAdding(false);
       } else if (activeTab === 'accounts_add') {
         setActiveTab('accounts_list');
+      } else {
+        // 리스트 뷰(인라인)에서는 데이터만 새로고침
+        loadData();
       }
 
     } catch (err) {
+      console.error(err);
       alert(err.message);
     }
+  };
+
+  const addData = () => saveData(newItem, isEditMode, editId); // 레거시 래퍼
+
+  // 인라인 수정 시작
+  const handleStartEdit = (row) => {
+    const id = row.id || row.uuid;
+    setEditId(id);
+    setEditForm({ ...row });
+  };
+
+  // 인라인 수정 취소
+  const handleCancelEdit = () => {
+    setEditId(null);
+    setEditForm({});
+  };
+
+  // 인라인 입력 변경
+  const handleEditChange = (key, value) => {
+    setEditForm(prev => ({ ...prev, [key]: value }));
   };
 
   // 삭제 핸들러
@@ -441,19 +470,8 @@ const Investment = () => {
     }
   };
 
-  // 수정 핸들러
-  const handleEdit = (row) => {
-    const id = row.id || row.ID || row.Id || row.uuid || row.UUID;
-    if (!id) {
-      alert('수정할 데이터의 고유 ID(A열)를 찾을 수 없습니다.\n시트의 A1 셀이 "id"로 설정되어 있는지 확인해주세요.');
-      return;
-    }
-
-    setNewItem({ ...row }); // 복사
-    setIsEditMode(true);
-    setEditId(id);
-    setIsInlineAdding(true); // 인라인 폼 열기 (모든 리스트 뷰 공통)
-  };
+  // 레거시 핸들러 제거됨 (인라인 수정으로 대체)
+  const handleEdit = (row) => handleStartEdit(row);
   // 엑셀 다운로드 핸들러
   const handleDownloadExcel = () => {
     if (!currentConfig || currentData.length === 0) {
@@ -680,11 +698,7 @@ const Investment = () => {
                 <button onClick={handleDownloadExcel} className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 whitespace-nowrap">
                   <Download size={16} /> 엑셀 다운로드
                 </button>
-                {activeTab.includes('accounts') && (
-                  <button onClick={() => setIsInlineAdding(!isInlineAdding)} className="px-4 py-2 bg-[var(--primary)] text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
-                    {isInlineAdding ? <filter size={16} /> : <Plus size={16} />} {isEditMode ? '수정 취소' : '항목추가'}
-                  </button>
-                )}
+                {/* 인라인 추가/수정 버튼 제거됨 (항상 노출되는 행으로 대체) */}
               </div>
             </div>
           </div>
@@ -692,49 +706,7 @@ const Investment = () => {
           {/* 에러 메시지 */}
           {error && (<div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200 text-sm">{error}</div>)}
 
-          {/* 인라인 항목 추가 폼 (계좌관리 & 투자내역 수정 공용) */}
-          {((activeTab === 'accounts_list' || activeTab === 'list' || activeTab === 'accounts_code_mapped') && isInlineAdding) && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-indigo-100 dark:border-gray-700 animate-slide-down">
-              <h3 className="text-lg font-bold text-[var(--text-main)] mb-4 flex items-center gap-2">
-                {isEditMode ? <Edit size={20} className="text-[var(--primary)]" /> : <PlusCircle size={20} className="text-[var(--primary)]" />}
-                {isEditMode
-                  ? (activeTab === 'list' ? '투자내역 수정' : '계좌 정보 수정')
-                  : (activeTab === 'list' ? '투자내역 추가' : '계좌 정보 추가')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4 items-end">
-                {currentConfig?.columns.map(col => (
-                  <div key={col.key} className={col.key === 'note' ? 'col-span-1 md:col-span-3 lg:col-span-6' : ''}>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t[col.labelKey] || col.labelKey}</label>
-                    {col.type === 'select' ? (
-                      <select value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none">
-                        <option value="">Select...</option>
-                        {/* 계좌관리(코드) 탭이고, 현재 컬럼이 account_type이면 동적 옵션 사용 */}
-                        {/* 계좌관리(코드) 탭이고, 현재 컬럼이 account_type이면 동적 옵션 사용 */}
-                        {(activeTab === 'accounts_code_mapped' && col.key === 'account_type')
-                          ? getAccountTypeOptions('account_type').map(code => (<option key={code.code_id} value={code.code_id}>{code.code_name}</option>))
-                          : (activeTab === 'list' && col.key === 'category')
-                            ? getCategoryOptions('category').map(cat => (<option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>))
-                            : col.options.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))
-                        }
-                      </select>
-                    ) : (
-                      <input type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'} value={newItem[col.key] || ''} onChange={(e) => handleInputChange(col.key, e.target.value)} className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)] focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t[col.labelKey] || col.labelKey} />
-                    )}
-                  </div>
-                ))}
-
-                {/* Action Buttons Integrated into Grid */}
-                <div className="flex gap-2 lg:col-span-1">
-                  <button onClick={() => { setIsInlineAdding(false); setIsEditMode(false); setEditId(null); setNewItem({}); }} className="px-4 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 transition-colors whitespace-nowrap">
-                    닫기
-                  </button>
-                  <button onClick={addData} className={`px-4 py-2.5 ${isEditMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[var(--primary)] hover:bg-indigo-700'} text-white font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap`}>
-                    {isEditMode ? <Edit size={16} /> : <Plus size={16} />} {isEditMode ? '수정' : '추가'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Legacy Slide-down Form Removed */}
 
           {/* 데이터 테이블 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -762,39 +734,116 @@ const Investment = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedData.map((row, idx) => (
-                      <tr key={idx} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        {currentConfig?.columns.map(col => (
-                          <td key={col.key} className="p-4 text-sm text-[var(--text-main)]">
-                            {(() => {
-                              const val = row[col.key];
-                              // 신규 탭: 계좌유형 코드 매핑 표시
-                              if (activeTab === 'accounts_code_mapped' && col.key === 'account_type') {
-                                return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{getMappedAccountType('account_type', val)}</span>);
+                    {/* [New Row] Persistent Add Row at Top (CodeManagement Style) */}
+                    <tr className="bg-blue-50/50 dark:bg-blue-900/10 border-b-2 border-indigo-100 dark:border-indigo-900/30">
+                      {currentConfig?.columns.map(col => (
+                        <td key={col.key} className="p-2">
+                          {col.type === 'select' ? (
+                            <select
+                              value={newItem[col.key] || ''}
+                              onChange={(e) => handleInputChange(col.key, e.target.value)}
+                              className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">{t[col.labelKey] || col.labelKey}</option>
+                              {(activeTab === 'accounts_code_mapped' && col.key === 'account_type')
+                                ? getAccountTypeOptions('account_type').map(code => (<option key={code.code_id} value={code.code_id}>{code.code_name}</option>))
+                                : (activeTab === 'list' && col.key === 'category')
+                                  ? getCategoryOptions('category').map(cat => (<option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>))
+                                  : col.options?.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))
                               }
-                              // 투자내역 탭: 카테고리(계좌) 매핑 표시
-                              if (activeTab === 'list' && col.key === 'category') {
-                                return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{getMappedCategory('category', val)}</span>);
-                              }
-
-                              if (col.type === 'number') return Number(val).toLocaleString();
-                              if (col.type === 'select') return (<span className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300`}>{val}</span>);
-                              return val || '-';
-                            })()}
-                          </td>
-                        ))}
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => handleEdit(row)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="수정">
-                              <Edit size={16} />
-                            </button>
-                            <button onClick={() => handleDelete(row)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="삭제">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
+                            </select>
+                          ) : (
+                            <input
+                              type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                              value={newItem[col.key] || ''}
+                              onChange={(e) => handleInputChange(col.key, e.target.value)}
+                              placeholder={t[col.labelKey] || col.labelKey}
+                              className="w-full p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 dark:placeholder-gray-400"
+                            />
+                          )}
                         </td>
-                      </tr>
-                    ))}
+                      ))}
+                      <td className="p-2 text-right">
+                        <button onClick={() => saveData(newItem, false)} className="p-2 bg-[var(--primary)] text-white rounded hover:bg-indigo-700 transition-colors shadow-sm" title="추가">
+                          <Plus size={18} />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Data Rows */}
+                    {paginatedData.map((row, idx) => {
+                      const isEditing = editId === (row.id || row.uuid);
+                      return (
+                        <tr key={idx} className={`border-t border-gray-100 dark:border-gray-700 transition-colors ${isEditing ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
+                          {currentConfig?.columns.map(col => (
+                            <td key={col.key} className="p-4 text-sm text-[var(--text-main)]">
+                              {isEditing ? (
+                                // --- EDIT MODE INPUTS ---
+                                col.type === 'select' ? (
+                                  <select
+                                    value={editForm[col.key] || ''}
+                                    onChange={(e) => handleEditChange(col.key, e.target.value)}
+                                    className="w-full p-2 rounded border border-yellow-400 dark:border-yellow-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500"
+                                  >
+                                    <option value="">Select...</option>
+                                    {(activeTab === 'accounts_code_mapped' && col.key === 'account_type')
+                                      ? getAccountTypeOptions('account_type').map(code => (<option key={code.code_id} value={code.code_id}>{code.code_name}</option>))
+                                      : (activeTab === 'list' && col.key === 'category')
+                                        ? getCategoryOptions('category').map(cat => (<option key={cat.account_id} value={cat.account_id}>{cat.account_name}</option>))
+                                        : col.options?.map(opt => (<option key={opt} value={opt}>{t[opt] || opt}</option>))
+                                    }
+                                  </select>
+                                ) : (
+                                  <input
+                                    type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                                    value={editForm[col.key] || ''}
+                                    onChange={(e) => handleEditChange(col.key, e.target.value)}
+                                    className="w-full p-2 rounded border border-yellow-400 dark:border-yellow-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500"
+                                  />
+                                )
+                              ) : (
+                                // --- READ MODE DISPLAY ---
+                                (() => {
+                                  const val = row[col.key];
+                                  if (activeTab === 'accounts_code_mapped' && col.key === 'account_type') {
+                                    return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{getMappedAccountType('account_type', val)}</span>);
+                                  }
+                                  if (activeTab === 'list' && col.key === 'category') {
+                                    return (<span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{getMappedCategory('category', val)}</span>);
+                                  }
+                                  if (col.type === 'number') return Number(val).toLocaleString();
+                                  if (col.type === 'select') return (<span className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300`}>{val}</span>);
+                                  return val || '-';
+                                })()
+                              )}
+                            </td>
+                          ))}
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {isEditing ? (
+                                <>
+                                  <button onClick={() => saveData(editForm, true, row.id || row.uuid)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="저장">
+                                    <Save size={18} />
+                                  </button>
+                                  <button onClick={handleCancelEdit} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="취소">
+                                    <X size={18} />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button onClick={() => handleStartEdit(row)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="수정">
+                                    <Edit size={16} />
+                                  </button>
+                                  <button onClick={() => handleDelete(row)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="삭제">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
