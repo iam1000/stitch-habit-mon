@@ -89,7 +89,7 @@ const Friends = () => {
         };
 
         fetchData();
-    }, [user]);
+    }, [user?.id]);
 
 
     const toggleHabit = async (habitId, currentCompleted, reward) => {

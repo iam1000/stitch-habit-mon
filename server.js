@@ -62,7 +62,7 @@ app.post('/api/sheets/data', async (req, res) => {
     });
 
     const originalDataCount = data.length;
-    console.log('📊 Original data count:', originalDataCount);
+    console.log(`📊 [${sheetName || 'Default'}] Original data count:`, originalDataCount);
 
     // 필터링 적용 (공통 필터만 적용 가능하거나, 필터를 동적으로 처리해야 함)
     // 현재 필터는 date, category, name 등 특정 컬럼에 의존함.

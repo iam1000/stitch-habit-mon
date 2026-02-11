@@ -21,11 +21,11 @@ const Investment = () => {
     }
   }, []);
 
-  // 탭 상태: 'list' | 'add' | 'accounts_list' | 'accounts_add' | 'accounts_code_mapped' | 'settings'
+  // 탭 상태: 'list' | 'add' | 'accounts_code_mapped' | 'settings'
   const [activeTab, setActiveTab] = useState('list');
 
   // 설정 (기본값 로드)
-  const [sheetId, setSheetId] = useState(localStorage.getItem('sheet_id') || '');
+  const [sheetId, setSheetId] = useState(localStorage.getItem('sheet_id') || import.meta.env.VITE_DATA_SHEET_ID || '');
   const [clientEmail, setClientEmail] = useState(import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL || '');
   const [privateKey, setPrivateKey] = useState(import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '');
 
@@ -44,13 +44,6 @@ const Investment = () => {
 
   const [viewState, setViewState] = useState({
     list: {
-      data: [],
-      originalData: [],
-      filters: { ...defaultFilters },
-      sortConfig: { ...defaultSort },
-      pagination: { currentPage: 1, itemsPerPage: 10 }
-    },
-    accounts_list: {
       data: [],
       originalData: [],
       filters: { ...defaultFilters },
@@ -80,7 +73,7 @@ const Investment = () => {
   const [editForm, setEditForm] = useState({}); // 인라인 행 수정용 상태
 
   // 현재 활성화된 화면의 키 구하기
-  const currentViewKey = (activeTab === 'accounts_list' || activeTab === 'accounts_code_mapped') ? activeTab : 'list';
+  const currentViewKey = (activeTab === 'accounts_code_mapped') ? activeTab : 'list';
 
   // 뷰 상태 접근 헬퍼
   const currentData = viewState[currentViewKey]?.data || [];
@@ -99,7 +92,7 @@ const Investment = () => {
   const getCurrentSheetConfig = () => {
     if (activeTab === 'list' || activeTab === 'add') {
       return sheetConfig.find(c => c.id === 'INVESTMENT');
-    } else if (activeTab === 'accounts_list' || activeTab === 'accounts_add' || activeTab === 'accounts_code_mapped') {
+    } else if (activeTab === 'accounts_code_mapped') {
       return sheetConfig.find(c => c.id === 'ACCOUNTS');
     }
     return null;
@@ -399,8 +392,6 @@ const Investment = () => {
       // 데이터 리로드 및 탭 전환 로직
       if (activeTab === 'add') {
         setActiveTab('list');
-      } else if (activeTab === 'accounts_add') {
-        setActiveTab('accounts_list');
       } else {
         // 리스트 뷰(인라인)에서는 데이터만 새로고침
         loadData();
@@ -563,16 +554,13 @@ const Investment = () => {
 
       {/* 탭 메뉴 (Top Navigation) */}
       <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-1">
-        <button onClick={() => setActiveTab('list')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'list' ? 'bg-[var(--primary)] text-white font-medium' : 'text-gray-500 hover:text-[var(--primary)] hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+        <button onClick={() => setActiveTab('list')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'list' ? 'bg-indigo-600 text-white font-medium' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
           <BarChart2 size={18} /> {t.investmentList}
         </button>
-        <button onClick={() => setActiveTab('add')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'add' ? 'bg-[var(--primary)] text-white font-medium' : 'text-gray-500 hover:text-[var(--primary)] hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+        <button onClick={() => setActiveTab('add')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'add' ? 'bg-indigo-600 text-white font-medium' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
           <PlusCircle size={18} /> {t.addInvestment}
         </button>
         <div className="w-px h-8 bg-gray-300 mx-1 self-center hidden sm:block"></div>
-        <button onClick={() => setActiveTab('accounts_list')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'accounts_list' ? 'bg-[var(--primary)] text-white font-medium' : 'text-gray-500 hover:text-[var(--primary)] hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-          <CreditCard size={18} /> {t.accountList}
-        </button>
         <button onClick={() => setActiveTab('accounts_code_mapped')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'accounts_code_mapped' ? 'bg-indigo-600 text-white font-medium' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
           <CreditCard size={18} /> 계좌 관리(코드)
         </button>
@@ -592,7 +580,7 @@ const Investment = () => {
               <input type="text" value={sheetId} onChange={(e) => setSheetId(e.target.value)} className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-[var(--text-main)]" placeholder="ID" />
             </div>
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">{t.autoConfigured}</div>
-            <button onClick={handleSaveSettings} className="px-6 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+            <button onClick={handleSaveSettings} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
               <Save size={18} /> {t.saveSettings}
             </button>
           </div>
@@ -600,7 +588,7 @@ const Investment = () => {
       )}
 
       {/* 목록 조회 탭 (List View & Code Mapped View) */}
-      {(activeTab === 'list' || activeTab === 'accounts_list' || activeTab === 'accounts_code_mapped') && (
+      {(activeTab === 'list' || activeTab === 'accounts_code_mapped') && (
         <div className="space-y-6 animate-fade-in">
           {/* 필터 섹션 */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -640,30 +628,7 @@ const Investment = () => {
                 </>
               )}
 
-              {/* --- 2. 계좌관리 필터 (요청사항반영) --- */}
-              {activeTab === 'accounts_list' && (
-                <>
-                  {/* 계좌 유형 (account_type) */}
-                  {currentConfig?.columns.find(c => c.key === 'account_type') && (
-                    <select value={currentFilters.account_type} onChange={(e) => handleFilterChange('account_type', e.target.value)} className="p-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 min-w-[120px]">
-                      <option value="all">전체 유형</option>
-                      {currentConfig.columns.find(c => c.key === 'account_type').options?.map(opt => (
-                        <option key={opt} value={opt}>{t[opt] || opt}</option>
-                      ))}
-                    </select>
-                  )}
 
-                  {/* 계좌명 (account_name) */}
-                  <div className="relative flex-grow max-w-[200px]">
-                    <input type="text" value={currentFilters.account_name} onChange={(e) => handleFilterChange('account_name', e.target.value)} placeholder="계좌명 검색" className="w-full p-2 pl-3 pr-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
-                  </div>
-
-                  {/* 금융기관 (account_company) */}
-                  <div className="relative flex-grow max-w-[200px]">
-                    <input type="text" value={currentFilters.account_company} onChange={(e) => handleFilterChange('account_company', e.target.value)} placeholder="금융기관 검색" className="w-full p-2 pl-3 pr-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
-                  </div>
-                </>
-              )}
 
               {/* --- 3. 계좌관리 (코드) 필터 (신규, 매핑 적용) --- */}
               {activeTab === 'accounts_code_mapped' && (
@@ -764,7 +729,7 @@ const Investment = () => {
                         </td>
                       ))}
                       <td className="p-2 text-right">
-                        <button onClick={() => saveData(newItem, false)} className="p-2 bg-[var(--primary)] text-white rounded hover:bg-indigo-700 transition-colors shadow-sm" title="추가">
+                        <button onClick={() => saveData(newItem, false)} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm" title="추가">
                           <Plus size={18} />
                         </button>
                       </td>
@@ -918,7 +883,7 @@ const Investment = () => {
               <PlusCircle className="text-[var(--primary)]" />
               {isEditMode ? (activeTab === 'add' ? '투자내역 수정' : '계좌정보 수정') : (activeTab === 'add' ? t.addNewItem : t.addAccount)}
             </h2>
-            <button onClick={addData} className={`px-6 py-2 ${isEditMode ? 'bg-blue-600' : 'bg-[var(--primary)]'} text-white font-bold rounded-lg hover:opacity-90 transition-transform active:scale-[0.98] shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2`}>
+            <button onClick={addData} className={`px-6 py-2 ${isEditMode ? 'bg-blue-600' : 'bg-indigo-600'} text-white font-bold rounded-lg hover:opacity-90 transition-transform active:scale-[0.98] shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2`}>
               {isEditMode ? <Edit size={20} /> : <Plus size={20} />} {isEditMode ? '수정하기' : t.addButton}
             </button>
           </div>

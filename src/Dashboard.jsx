@@ -1,323 +1,152 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import {
-    CheckCircle2,
-    Circle,
-    Trophy,
-    Settings,
-    Check,
-    Edit2,
-    X,
-    ShoppingBag,
-    Home,
-    User,
-    Flame,
-    Globe,
-    LogOut
-} from 'lucide-react';
-import { useLanguage } from './LanguageContext';
-import { useAuth } from './AuthContext'; // Import useAuth
-import { supabase } from './supabaseClient'; // Import supabase
+import React, { useState, useMemo } from 'react';
+import { RefreshCw, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { useInvestmentData } from './hooks/useInvestmentData';
+import KPICards from './components/Dashboard/KPICards';
+import AssetTrendChart from './components/Dashboard/charts/AssetTrendChart';
+import PortfolioChart from './components/Dashboard/charts/PortfolioChart';
+import MonthlyActivityChart from './components/Dashboard/charts/MonthlyActivityChart';
 
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const { t, language, toggleLanguage } = useLanguage();
-    const { user, signOut } = useAuth(); // Get user and signOut
-    const [xp, setXp] = useState(0); // Start with 0 (fetch from DB)
-    const [level, setLevel] = useState(1);
-    const [habits, setHabits] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { investmentData, accountData, loading, error, refresh } = useInvestmentData();
+    const [dateRange, setDateRange] = useState('year'); // 'year', 'all', 'month'
 
-    // Nickname State
-    const [nickname, setNickname] = useState('');
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [tempNickname, setTempNickname] = useState('');
-
-    // Protected Route Check
-    useEffect(() => {
-        if (!user) {
-            navigate('/login');
+    // Calculate Start Date for Filtering
+    const startDate = useMemo(() => {
+        const now = new Date();
+        if (dateRange === 'year') {
+            return new Date(now.getFullYear(), 0, 1);
+        } else if (dateRange === 'month') {
+            return new Date(now.getFullYear(), now.getMonth(), 1);
         }
-    }, [user, navigate]);
+        return new Date(0); // All time
+    }, [dateRange]);
 
-    // Fetch Data on Load
-    useEffect(() => {
-        if (!user) return;
+    // Filter Transactions for Activity Chart & List (Show only activity in selected range)
+    const activityData = useMemo(() => {
+        return investmentData.filter(item => new Date(item.date) >= startDate);
+    }, [investmentData, startDate]);
 
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // 1. Get Profile (XP, Level, Username)
-                let { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
+    if (loading && investmentData.length === 0) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
 
-                if (profileError && profileError.code === 'PGRST116') {
-                    // Profile doesn't exist yet, create one
-                    const { data: newProfile, error: createError } = await supabase
-                        .from('profiles')
-                        .insert([{ id: user.id, xp: 0, level: 1 }])
-                        .select()
-                        .single();
-                    if (!createError) profile = newProfile;
-                }
-
-                if (profile) {
-                    setXp(profile.xp);
-                    setLevel(profile.level);
-                    setNickname(profile.username || '');
-                }
-
-                // 2. Get Habits (and auto-create defaults if missing via RPC)
-                const { data: habitsData, error: habitsError } = await supabase
-                    .rpc('initialize_user_habits', { target_user_id: user.id });
-
-                if (habitsError) throw habitsError;
-
-                if (habitsData) {
-                    setHabits(habitsData);
-                }
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [user]);
-
-
-    const toggleHabit = async (habitId, currentCompleted, reward) => {
-        try {
-            // Optimistic UI Update first
-            const newCompleted = !currentCompleted;
-            setHabits(habits.map(h => h.id === habitId ? { ...h, completed: newCompleted } : h));
-
-            // Calculate new XP
-            let newXp = newCompleted ? xp + reward : xp - reward;
-            if (newXp < 0) newXp = 0;
-            setXp(newXp);
-
-            // Update DB: Habits
-            await supabase.from('habits').update({ completed: newCompleted }).eq('id', habitId);
-
-            // Update DB: Profile XP
-            await supabase.from('profiles').update({ xp: newXp }).eq('id', user.id);
-
-            // Check Evolution
-            if (newCompleted && newXp >= 100) {
-                setTimeout(() => navigate('/evolution'), 1000);
-            }
-
-        } catch (error) {
-            console.error("Error toggling habit:", error);
-            // Revert on error (optional implementation)
-        }
-    };
-
-    const handleSignOut = async () => {
-        await signOut();
-        navigate('/');
-    };
-
-    const handleSaveNickname = async () => {
-        if (!tempNickname.trim()) {
-            setIsEditingName(false);
-            return;
-        }
-
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ username: tempNickname })
-                .eq('id', user.id);
-
-            if (error) throw error;
-
-            setNickname(tempNickname);
-            setIsEditingName(false);
-        } catch (error) {
-            console.error('Error saving nickname:', error);
-            alert('Failed to save nickname. Please try again.');
-        }
-    };
-
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]">Loading your monster...</div>;
+    if (error) {
+        return (
+            <div className="p-6 text-center text-red-500">
+                <p>Error loading dashboard data: {error}</p>
+                <button onClick={refresh} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Retry</button>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-6 lg:p-12">
-            <header className="flex justify-between items-center mb-10">
+        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-[var(--text-main)] mb-1 font-heading">{t.helloPlayer}</h1>
-                    <p className="text-gray-500">{t.monsterWaiting}</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">투자 대시보드</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">자산 현황 및 투자 성과를 한눈에 확인하세요.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* Mobile/Simple Language Toggle */}
-                    <button onClick={toggleLanguage} className="p-2 rounded-full hover:bg-gray-100 text-gray-500">
-                        <Globe size={20} />
-                    </button>
 
-                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full flex-none"></div>
-
-                        {isEditingName ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    value={tempNickname}
-                                    onChange={(e) => setTempNickname(e.target.value)}
-                                    className="border-b border-purple-500 outline-none w-32 text-sm font-semibold bg-transparent"
-                                    autoFocus
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
-                                />
-                                <button onClick={handleSaveNickname} className="text-green-500 hover:text-green-600">
-                                    <Check size={16} />
-                                </button>
-                                <button onClick={() => setIsEditingName(false)} className="text-red-400 hover:text-red-500">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 group">
-                                <span className="font-semibold text-sm truncate max-w-[150px]" title={user?.email}>
-                                    {nickname || user?.email?.split('@')[0] || t.profile}
-                                </span>
-                                <button
-                                    onClick={() => {
-                                        setTempNickname(nickname || user?.email?.split('@')[0] || '');
-                                        setIsEditingName(true);
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-purple-500"
-                                >
-                                    <Edit2 size={14} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-                {/* Center Column: Monster & Quest */}
-                <div className="lg:col-span-2 space-y-8">
-
-                    {/* My Monster Card */}
-                    <motion.div
-                        className="card relative overflow-hidden bg-gradient-to-br from-[#e0c3fc] to-[#8ec5fc] border-none text-white min-h-[300px] flex flex-col items-center justify-center p-8"
-                        whileHover={{ scale: 1.01 }}
-                    >
-                        {/* Background Sparkles */}
-                        <div className="absolute top-0 left-0 w-full h-full opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
-
-                        {/* Monster Avatar (CSS Blob) */}
-                        <motion.div
-                            className="w-40 h-40 bg-gradient-to-tr from-[#42f05f] to-[#f49d25] rounded-[40%_60%_70%_30%/40%_50%_60%_50%] shadow-2xl relative z-10 mb-8 border-4 border-white/50"
-                            animate={{
-                                borderRadius: ["60% 40% 30% 70%/60% 30% 70% 40%", "30% 60% 70% 40%/50% 60% 30% 60%", "60% 40% 30% 70%/60% 30% 70% 40%"],
-                                y: [0, -10, 0]
-                            }}
-                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                <div className="flex items-center gap-2">
+                    {/* Date Range Select */}
+                    <div className="relative">
+                        <select
+                            value={dateRange}
+                            onChange={(e) => setDateRange(e.target.value)}
+                            className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                         >
-                            {/* Face */}
-                            <div className="absolute top-1/3 left-1/4 w-3 h-3 bg-black rounded-full animate-blink"></div>
-                            <div className="absolute top-1/3 right-1/4 w-3 h-3 bg-black rounded-full animate-blink"></div>
-                            <div className="absolute bottom-1/3 left-1/3 w-8 h-4 border-b-4 border-black/50 rounded-full"></div>
-                        </motion.div>
-
-                        {/* Stats & XP */}
-                        <div className="w-full max-w-sm relative z-10">
-                            <div className="flex justify-between text-sm font-bold mb-2 text-white drop-shadow-md">
-                                <span>{t.monsterName} (Lvl {level})</span>
-                                <span>{xp}/100 XP</span>
-                            </div>
-                            <div className="h-6 bg-black/20 rounded-full backdrop-blur-sm p-1">
-                                <motion.div
-                                    className="h-full bg-gradient-to-r from-[#42f05f] to-[#2ecc71] rounded-full shadow-[0_0_10px_rgba(66,240,95,0.8)]"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.min(xp, 100)}%` }}
-                                    transition={{ type: "spring", stiffness: 50 }}
-                                />
-                            </div>
-                            {xp >= 100 && (
-                                <motion.div
-                                    className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#f49d25] text-white font-bold px-4 py-1 rounded-full shadow-lg whitespace-nowrap"
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                >
-                                    {t.readyToEvolve}
-                                </motion.div>
-                            )}
-                        </div>
-                    </motion.div>
-
-                    {/* Daily Quests */}
-                    <div>
-                        <h2 className="text-xl font-heading font-bold mb-4 flex items-center gap-2">
-                            <Flame className="text-[#f49d25]" /> {t.dailyQuests}
-                        </h2>
-                        <div className="space-y-3">
-                            {habits.map((habit) => (
-                                <motion.div
-                                    key={habit.id}
-                                    layout
-                                    className={`nav-item p-4 rounded-2xl flex items-center justify-between cursor-pointer border-2 transition-all ${habit.completed ? 'bg-gray-50 border-gray-100 opacity-60' : 'bg-white border-transparent hover:border-[#42f05f] shadow-sm'}`}
-                                    onClick={() => toggleHabit(habit.id, habit.completed, habit.xp_reward)}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${habit.completed ? 'bg-[#2ecc71] text-white' : 'bg-gray-100 text-gray-300'}`}>
-                                            {habit.completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}
-                                        </div>
-                                        <span className={`font-semibold ${habit.completed ? 'line-through text-gray-400' : 'text-[#1f2937]'}`}>
-                                            {/* Use translation if key exists, else raw title for user entered habits */}
-                                            {language === "ko" && t[habit.title] ? t[habit.title] : habit.title}
-                                        </span>
-                                    </div>
-                                    <span className="text-sm font-bold text-[#8c36e2] bg-purple-50 px-3 py-1 rounded-full">+{habit.xp_reward} XP</span>
-                                </motion.div>
-                            ))}
-                        </div>
+                            <option value="year">올해 (YTD)</option>
+                            <option value="month">이번 달</option>
+                            <option value="all">전체 기간</option>
+                        </select>
+                        <CalendarIcon className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
                     </div>
 
+                    <button
+                        onClick={refresh}
+                        className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 hover:text-indigo-600 hover:border-indigo-600 transition-colors"
+                        title="새로고침"
+                    >
+                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                    </button>
+                </div>
+            </div>
+
+            {/* KPI Cards - Uses Full Data for Total Assets */}
+            <KPICards investmentData={investmentData} accountData={accountData} />
+
+            {/* Main Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                {/* Asset Trend - Uses Full Data + Start Date */}
+                <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg">자산 변동 추이</h3>
+                        <div className="text-xs text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Daily Trend</div>
+                    </div>
+                    <AssetTrendChart data={investmentData} startDate={startDate} />
                 </div>
 
-                {/* Right Panel: Shop & Leaderboard */}
-                <div className="space-y-6">
-                    <div className="card">
-                        <h3 className="font-bold mb-4">{t.leaderboard} 🏆</h3>
-                        <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gray-200"></div>
-                                        <div>
-                                            <div className="font-bold text-sm">Player {i}</div>
-                                            <div className="text-xs text-gray-400">Lvl {10 - i}</div>
-                                        </div>
-                                    </div>
-                                    <span className="font-bold text-[#f49d25]">#{i}</span>
-                                </div>
-                            ))}
-                        </div>
+                {/* Portfolio Distribution - Uses Full Data (Current Status) */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg">포트폴리오 비중</h3>
+                        <div className="text-xs text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">By Account</div>
                     </div>
-
-                    <div className="card bg-[#1f2937] text-white">
-                        <h3 className="font-bold mb-4 flex items-center gap-2">
-                            <ShoppingBag size={18} /> {t.mysteryShop}
-                        </h3>
-                        <div className="aspect-square bg-gray-600/30 rounded-xl mb-4 flex items-center justify-center text-4xl">
-                            🎁
-                        </div>
-                        <button className="w-full py-2 bg-[#8c36e2] rounded-lg font-bold text-sm hover:bg-[#7b2fc7] transition-colors">
-                            {t.openBox}
-                        </button>
+                    <div className="flex-1 flex items-center justify-center">
+                        <PortfolioChart data={investmentData} accounts={accountData} />
                     </div>
                 </div>
+            </div>
 
+            {/* Sub Charts / Details Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Monthly Activity - Uses Filtered Data (Transactions in period) */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-6">월별 투자 활동</h3>
+                    <MonthlyActivityChart data={activityData} />
+                </div>
+                {/* Recent Transactions List - Uses Filtered Data */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-4">최근 투자 내역</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th className="px-4 py-3 rounded-tl-lg">Date</th>
+                                    <th className="px-4 py-3">Item</th>
+                                    <th className="px-4 py-3">Category</th>
+                                    <th className="px-4 py-3 text-right">Amount</th>
+                                    <th className="px-4 py-3 rounded-tr-lg">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {activityData.slice(-5).reverse().map((item, index) => (
+                                    <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.date}</td>
+                                        <td className="px-4 py-3">{item.item_name}</td>
+                                        <td className="px-4 py-3">{(accountData.find(a => String(a.id) === String(item.category)) || {}).name || item.category}</td>
+                                        <td className="px-4 py-3 text-right">₩ {(Number(item.amount || (item.qty * item.price))).toLocaleString()}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${item.type === 'buy' || item.amount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                                                {item.type === 'buy' || item.amount > 0 ? 'Buy' : 'Sell'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {activityData.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="px-4 py-3 text-center">데이터가 없습니다.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     );
