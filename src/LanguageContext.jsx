@@ -260,7 +260,7 @@ export const translations = {
 };
 
 export const LanguageProvider = ({ children }) => {
-    const [language, setLanguage] = useState('en');
+    const [language, setLanguage] = useState('ko');
 
     const toggleLanguage = () => {
         setLanguage(prev => prev === 'en' ? 'ko' : 'en');
