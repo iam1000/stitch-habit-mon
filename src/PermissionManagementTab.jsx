@@ -41,7 +41,7 @@ const PermissionManagementTab = () => {
     const [newPermForm, setNewPermForm] = useState(initialFormState);
 
     // 환경 변수 설정
-    const sheetId = localStorage.getItem('sheet_id') || '';
+    const sheetId = localStorage.getItem('sheet_id') || import.meta.env.VITE_AUTH_SHEET_ID || '';
     const clientEmail = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
     const privateKey = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '';
 
