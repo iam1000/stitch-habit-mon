@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
+import { getApiUrl } from '../utils/apiConfig';
 
 export const useInvestmentData = () => {
     const { user } = useAuth();
@@ -42,10 +43,10 @@ export const useInvestmentData = () => {
         setLoading(true);
         setError(null);
 
+
+
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/data'
-                : '/.netlify/functions/sheets-data';
+            const apiUrl = getApiUrl('data');
 
             // Fetch Investment Data and Account Data in parallel using dynamic sheet names
             const [investRes, accountRes] = await Promise.all([

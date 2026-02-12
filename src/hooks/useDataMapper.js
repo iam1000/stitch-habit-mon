@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MAPPING_RULES } from '../config/mapping_rules';
+import { getApiUrl } from '../utils/apiConfig';
 
 /**
  * 데이터 매핑 처리를 위한 커스텀 훅
@@ -31,9 +32,7 @@ export const useDataMapper = (viewId) => {
         const newRawRefData = {};
 
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/data'
-                : '/.netlify/functions/sheets-data';
+            const apiUrl = getApiUrl('data');
 
             // 각 규칙별로 참조 시트 데이터 로드
             await Promise.all(rules.map(async (rule) => {

@@ -3,6 +3,7 @@ import { useLanguage } from './LanguageContext';
 import ExcelJS from 'exceljs';
 import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit, X, Check } from 'lucide-react';
 import { useDataMapper } from './hooks/useDataMapper';
+import { getApiUrl } from './utils/apiConfig';
 
 const Investment = () => {
   const { t } = useLanguage();
@@ -143,9 +144,7 @@ const Investment = () => {
     if (!sheetId || !clientEmail || !privateKey) return;
 
     try {
-      const apiUrl = import.meta.env.DEV
-        ? 'http://localhost:3001/api/sheets/data'
-        : '/.netlify/functions/sheets-data';
+      const apiUrl = getApiUrl('data');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -200,9 +199,7 @@ const Investment = () => {
     // 필터 정리 (불필요한 키 제거해서 보내기 등) - backend가 알아서 걸러냄
 
     try {
-      const apiUrl = import.meta.env.DEV
-        ? 'http://localhost:3001/api/sheets/data'
-        : '/.netlify/functions/sheets-data';
+      const apiUrl = getApiUrl('data');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -354,9 +351,7 @@ const Investment = () => {
     const itemsEndpoint = isUpdate ? 'update' : 'add';
     const method = isUpdate ? 'PUT' : 'POST';
 
-    const apiUrl = import.meta.env.DEV
-      ? `http://localhost:3001/api/sheets/${itemsEndpoint}`
-      : `/.netlify/functions/sheets-${itemsEndpoint}`;
+    const apiUrl = getApiUrl(itemsEndpoint);
 
     try {
       const bodyPayload = {
@@ -433,9 +428,7 @@ const Investment = () => {
 
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    const apiUrl = import.meta.env.DEV
-      ? 'http://localhost:3001/api/sheets/delete'
-      : '/.netlify/functions/sheets-delete';
+    const apiUrl = getApiUrl('delete');
 
     try {
       const response = await fetch(apiUrl, {

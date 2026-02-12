@@ -1,6 +1,4 @@
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-import { v4 as uuidv4 } from 'uuid';
+import { addSheetsData } from '../../src/lib/functions/sheets-core.js';
 
 export const handler = async (event, context) => {
   const headers = {
@@ -18,46 +16,13 @@ export const handler = async (event, context) => {
   }
 
   try {
-    const { sheetId, clientEmail, privateKey, item, sheetName } = JSON.parse(event.body);
-
-    if (!sheetId || !clientEmail || !privateKey || !item) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: '모든 데이터를 입력해주세요.' }) };
-    }
-
-    const serviceAccountAuth = new JWT({
-      email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    const doc = new GoogleSpreadsheet(sheetId, serviceAccountAuth);
-    await doc.loadInfo();
-
-    let sheet;
-    if (sheetName) {
-      sheet = doc.sheetsByTitle[sheetName];
-      if (!sheet) {
-        return { statusCode: 404, headers, body: JSON.stringify({ error: `시트(${sheetName})가 존재하지 않습니다.` }) };
-      }
-    } else {
-      sheet = doc.sheetsByIndex[0];
-    }
-
-    const newId = uuidv4();
-    const newItem = {
-      ...item,
-      id: newId,
-      ID: newId,
-      uuid: newId,
-      UUID: newId
-    };
-
-    await sheet.addRow(newItem);
+    const params = JSON.parse(event.body);
+    const result = await addSheetsData(params);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, id: newId }),
+      body: JSON.stringify(result),
     };
   } catch (error) {
     console.error('Error adding data:', error);

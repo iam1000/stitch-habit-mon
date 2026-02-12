@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
+import { getApiUrl } from './utils/apiConfig';
 
 const AuthContext = createContext();
 
@@ -50,9 +51,7 @@ export const AuthProvider = ({ children }) => {
 
         setLoadingPermissions(true);
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/data'
-                : '/.netlify/functions/sheets-data';
+            const apiUrl = getApiUrl('data');
 
             // 1. Fetch Menu Definitions (Master)
             const menuRes = await fetch(apiUrl, {

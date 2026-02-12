@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from './LanguageContext';
+import { getApiUrl } from './utils/apiConfig';
 import { Plus, Trash2, Save, Edit, RefreshCw, X, Search, Filter } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AVAILABLE_ICONS } from './constants/iconOptions';
@@ -57,9 +58,7 @@ const MenuManagementTab = () => {
         setError(null);
 
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/data'
-                : '/.netlify/functions/sheets-data';
+            const apiUrl = getApiUrl('data');
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -164,9 +163,7 @@ const MenuManagementTab = () => {
         };
 
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/add'
-                : '/.netlify/functions/sheets-add';
+            const apiUrl = getApiUrl('add');
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -194,9 +191,7 @@ const MenuManagementTab = () => {
         if (!editingId) return;
 
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/update'
-                : '/.netlify/functions/sheets-update';
+            const apiUrl = getApiUrl('update');
 
             const response = await fetch(apiUrl, {
                 method: 'PUT',
@@ -230,9 +225,7 @@ const MenuManagementTab = () => {
         if (!confirm(`정말 삭제하시겠습니까? (${item.label_key})`)) return;
 
         try {
-            const apiUrl = import.meta.env.DEV
-                ? 'http://localhost:3001/api/sheets/delete'
-                : '/.netlify/functions/sheets-delete';
+            const apiUrl = getApiUrl('delete');
 
             const response = await fetch(apiUrl, {
                 method: 'DELETE',
