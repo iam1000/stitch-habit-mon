@@ -13,19 +13,44 @@ app.use(express.json());
 // 단순 메모리 캐시 (할당량 초과 방지)
 const cache = new Map();
 const CACHE_DURATION = 60 * 1000; // 60초
+const MAX_CACHE_SIZE = 100; // 최대 캐시 개수
+
+// 객체 키 정렬하여 문자열 변환 (일관된 캐시 키 생성)
+const stableStringify = (obj) => {
+  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+  return JSON.stringify(Object.keys(obj).sort().reduce((acc, key) => {
+    acc[key] = obj[key];
+    return acc;
+  }, {}));
+};
 
 const getCacheKey = (sheetId, sheetName, filters) => {
-  return `${sheetId}_${sheetName}_${JSON.stringify(filters || {})}`;
+  // filters 객체 키 정렬
+  return `${sheetId}_${sheetName}_${stableStringify(filters || {})}`;
 };
 
 // 캐시 삭제 함수 (데이터 변경 시 호출)
 const clearCache = (sheetId, sheetName) => {
   const prefix = `${sheetId}_${sheetName || ''}`;
+  let deleteCount = 0;
   for (const key of cache.keys()) {
     if (key.startsWith(prefix)) {
       cache.delete(key);
-      console.log(`🧹 [Cache Cleared] ${key}`);
+      deleteCount++;
     }
+  }
+  if (deleteCount > 0) {
+    console.log(`🧹 [Cache Cleared] ${deleteCount} entries for ${sheetName || 'All'}`);
+  }
+};
+
+// 캐시 사이즈 관리 (오래된 순 삭제 - LRU 방식 아님, 단순 FIFO에 가까움)
+const manageCacheSize = () => {
+  if (cache.size > MAX_CACHE_SIZE) {
+    // 가장 먼저 들어온 키 삭제 (Map은 삽입 순서 유지)
+    const firstKey = cache.keys().next().value;
+    cache.delete(firstKey);
+    console.log(`🗑️ [Cache Evicted] Max size reached, removed: ${firstKey?.substring(0, 30)}...`);
   }
 };
 
@@ -139,6 +164,9 @@ app.post('/api/sheets/data', async (req, res) => {
 
     console.log(`✅ Final filtered data count: ${data.length}`);
 
+    // 캐시 사이즈 관리
+    manageCacheSize();
+    
     // 캐시 저장
     cache.set(cacheKey, {
       data,
