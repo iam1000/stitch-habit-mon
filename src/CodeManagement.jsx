@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
-import { Tag, Menu, Lock } from 'lucide-react';
+import { Tag, Menu, Lock, ExternalLink } from 'lucide-react';
 import CodeManagementTab from './CodeManagementTab';
 import MenuManagementTab from './MenuManagementTab';
 import PermissionManagementTab from './PermissionManagementTab';
@@ -31,7 +31,7 @@ const CodeManagement = () => {
             </header>
 
             {/* Tab Navigation (Investment Style) */}
-            <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-1 flex-none">
+            <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-1 flex-none items-center">
                 <button
                     onClick={() => setActiveTab('code')}
                     className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'code'
@@ -59,6 +59,21 @@ const CodeManagement = () => {
                 >
                     <Lock size={18} /> {t.permMgmt}
                 </button>
+
+                {/* Google Sheet Link (Right Side) */}
+                <div className="flex-grow"></div>
+                {import.meta.env.VITE_AUTH_SHEET_ID && (
+                    <a
+                        href={`https://docs.google.com/spreadsheets/d/${import.meta.env.VITE_AUTH_SHEET_ID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 text-sm text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 rounded-lg flex items-center gap-1.5 transition-colors border border-green-200 dark:border-green-800"
+                        title="Google Sheet 열기"
+                    >
+                        <ExternalLink size={14} />
+                        <span className="hidden sm:inline font-medium">Google Sheet</span>
+                    </a>
+                )}
             </div>
 
             {/* Content Area */}

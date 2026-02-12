@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from './LanguageContext';
 import ExcelJS from 'exceljs';
-import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit, X, Check } from 'lucide-react';
+import { Save, RefreshCw, Plus, Filter, CreditCard, BarChart2, Settings, Landmark, PlusCircle, Search, Download, Trash2, Edit, X, Check, ExternalLink } from 'lucide-react';
 import { useDataMapper } from './hooks/useDataMapper';
 import { getApiUrl } from './utils/apiConfig';
 
@@ -558,6 +558,18 @@ const Investment = () => {
           <CreditCard size={18} /> 계좌 관리(코드)
         </button>
         <div className="flex-grow"></div>
+        {import.meta.env.VITE_DATA_SHEET_ID && (
+          <a
+            href={`https://docs.google.com/spreadsheets/d/${import.meta.env.VITE_DATA_SHEET_ID}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 rounded-lg flex items-center gap-1.5 transition-colors border border-green-200 dark:border-green-800 mr-2"
+            title="Google Sheet 열기"
+          >
+            <ExternalLink size={16} />
+            <span className="hidden sm:inline font-medium">Google Sheet</span>
+          </a>
+        )}
         <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-t-lg flex items-center gap-2 transition-colors ${activeTab === 'settings' ? 'bg-gray-700 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
           <Settings size={18} /> {t.connectionSettings}
         </button>
