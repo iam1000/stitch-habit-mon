@@ -7,7 +7,8 @@ import {
     Moon,
     Sun,
     Globe,
-    Menu
+    Menu,
+    Sparkles
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -143,8 +144,10 @@ const MainLayout = () => {
             {/* Sidebar */}
             <aside className="hidden lg:flex flex-col w-64 p-6 sticky top-0 h-screen z-30 transition-colors duration-200 bg-[var(--bg-card)] border-r border-[var(--border-color)]">
                 <div className="flex items-center gap-2 mb-12">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#42f05f] to-[#2ecc71] rounded-lg"></div>
-                    <span className="text-xl font-bold font-heading text-[var(--text-main)]">HabitMons</span>
+                    <div className="w-8 h-8 bg-gradient-to-br from-[#4f46e5] to-[#818cf8] rounded-xl flex items-center justify-center shadow-lg transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+                        <Sparkles className="text-white w-4 h-4" />
+                    </div>
+                    <span className="text-xl font-[900] tracking-tight font-heading italic text-[var(--text-main)]">DonMany</span>
                 </div>
 
                 {/* Sidebar Menus (Top) */}
@@ -200,8 +203,10 @@ const MainLayout = () => {
                 <aside className={`absolute inset-y-0 left-0 w-72 bg-[var(--bg-card)] p-6 shadow-2xl flex flex-col transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     <div className="flex items-center justify-between mb-12">
                         <div className="flex items-center gap-2">
-                            <div className="w-9 h-9 bg-gradient-to-br from-[#42f05f] to-[#2ecc71] rounded-xl"></div>
-                            <span className="text-2xl font-bold font-heading text-[var(--text-main)]">HabitMons</span>
+                            <div className="w-9 h-9 bg-gradient-to-br from-[#4f46e5] to-[#818cf8] rounded-xl flex items-center justify-center shadow-lg transform -rotate-3">
+                                <Sparkles className="text-white w-5 h-5" />
+                            </div>
+                            <span className="text-2xl font-[900] tracking-tight font-heading italic text-[var(--text-main)]">DonMany</span>
                         </div>
                         <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             <X size={24} />
