@@ -10,6 +10,25 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// 단순 메모리 캐시 (할당량 초과 방지)
+const cache = new Map();
+const CACHE_DURATION = 60 * 1000; // 60초
+
+const getCacheKey = (sheetId, sheetName, filters) => {
+  return `${sheetId}_${sheetName}_${JSON.stringify(filters || {})}`;
+};
+
+// 캐시 삭제 함수 (데이터 변경 시 호출)
+const clearCache = (sheetId, sheetName) => {
+  const prefix = `${sheetId}_${sheetName || ''}`;
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+      console.log(`🧹 [Cache Cleared] ${key}`);
+    }
+  }
+};
+
 // Google Sheets 데이터 읽기
 app.post('/api/sheets/data', async (req, res) => {
   try {
@@ -19,9 +38,17 @@ app.post('/api/sheets/data', async (req, res) => {
       return res.status(400).json({ error: '모든 설정값을 입력해주세요.' });
     }
 
+    // 캐시 확인
+    const cacheKey = getCacheKey(sheetId, sheetName, filters);
+    const cachedData = cache.get(cacheKey);
+    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_DURATION)) {
+      console.log(`📦 [Cache Hit] ${sheetName || 'Default'}`);
+      return res.json({ data: cachedData.data });
+    }
+
     const serviceAccountAuth = new JWT({
       email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
+      key: privateKey.replace(/"/g, '').replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
@@ -44,12 +71,9 @@ app.post('/api/sheets/data', async (req, res) => {
       sheet = doc.sheetsByIndex[0];
     }
 
+    // 헤더 정보 로드 (명시적으로 호출해야 안정적임)
+    await sheet.loadHeaderRow();
     const rows = await sheet.getRows();
-
-    // 동적 데이터 매핑: 헤더 정보를 모르므로, 그냥 row 객체의 _rawData나 혹은 key-value 쌍을 그대로 반환해야 함.
-    // 하지만 google-spreadsheet 라이브러리의 row 객체는 get() 메서드를 사용함.
-    // 헤더 정보를 클라이언트에서 관리하므로, 여기서는 모든 헤더 값을 다 내려주는게 좋음.
-    // row.toObject()가 있으면 좋겠지만, 직접 headerValues를 확인해서 매핑.
 
     const headerValues = sheet.headerValues;
 
@@ -80,7 +104,6 @@ app.post('/api/sheets/data', async (req, res) => {
       }
 
       // 그 외 필터들 (category, name 등 유동적으로 처리)
-      // filters 객체를 순회하며 처리
       // filters 객체를 순회하며 처리
       Object.keys(filters).forEach(key => {
         if (key === 'startDate' || key === 'endDate') return; // 이미 처리함
@@ -116,6 +139,12 @@ app.post('/api/sheets/data', async (req, res) => {
 
     console.log(`✅ Final filtered data count: ${data.length}`);
 
+    // 캐시 저장
+    cache.set(cacheKey, {
+      data,
+      timestamp: Date.now()
+    });
+
     // 정렬: date가 있으면 date 기준 최신순, 아니면 그대로
     if (headerValues.includes('date')) {
       data.sort((a, b) => {
@@ -128,7 +157,11 @@ app.post('/api/sheets/data', async (req, res) => {
     res.json({ data });
   } catch (error) {
     console.error('Error loading data:', error);
-    res.status(500).json({ error: '데이터를 불러오는 중 오류가 발생했습니다. (시트명 및 권한 확인)' });
+    res.status(500).json({
+      error: '데이터를 불러오는 중 오류가 발생했습니다.',
+      details: error.message,
+      suggestion: '시트 이름(CODES)이 정확한지, 구글 시트가 서비스 계정에 공유되었는지 확인해주세요.'
+    });
   }
 });
 
@@ -143,7 +176,7 @@ app.post('/api/sheets/add', async (req, res) => {
 
     const serviceAccountAuth = new JWT({
       email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
+      key: privateKey.replace(/"/g, '').replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
@@ -165,6 +198,9 @@ app.post('/api/sheets/add', async (req, res) => {
       sheet = doc.sheetsByIndex[0];
     }
 
+    // 헤더 정보 로드
+    await sheet.loadHeaderRow();
+
     // UUID 생성
     const newId = uuidv4();
     // 어떤 헤더명을 쓸지 모르니 가능한 키 모두에 할당 (Google Sheets가 알아서 매칭)
@@ -178,6 +214,9 @@ app.post('/api/sheets/add', async (req, res) => {
 
     // 시트에 데이터 추가
     await sheet.addRow(newItem);
+
+    // 관련 캐시 삭제
+    clearCache(sheetId, sheetName);
 
     res.json({ success: true, id: newId });
   } catch (error) {
@@ -197,7 +236,7 @@ app.put('/api/sheets/update', async (req, res) => {
 
     const serviceAccountAuth = new JWT({
       email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
+      key: privateKey.replace(/"/g, '').replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
@@ -236,6 +275,9 @@ app.put('/api/sheets/update', async (req, res) => {
     row.assign(updateData);
     await row.save();
 
+    // 관련 캐시 삭제
+    clearCache(sheetId, sheetName);
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating data:', error);
@@ -256,7 +298,7 @@ app.delete('/api/sheets/delete', async (req, res) => {
 
     const serviceAccountAuth = new JWT({
       email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
+      key: privateKey.replace(/"/g, '').replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
@@ -283,6 +325,9 @@ app.delete('/api/sheets/delete', async (req, res) => {
     }
 
     await row.delete();
+
+    // 관련 캐시 삭제
+    clearCache(sheetId, sheetName);
 
     res.json({ success: true });
   } catch (error) {

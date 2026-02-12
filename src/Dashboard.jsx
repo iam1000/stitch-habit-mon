@@ -83,21 +83,23 @@ const Dashboard = () => {
             {/* Main Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 {/* Asset Trend - Uses Full Data + Start Date */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-semibold text-gray-900 dark:text-white text-lg">자산 변동 추이</h3>
                         <div className="text-xs text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Daily Trend</div>
                     </div>
-                    <AssetTrendChart data={investmentData} startDate={startDate} />
+                    <div className="h-[300px] w-full">
+                        <AssetTrendChart data={investmentData} startDate={startDate} />
+                    </div>
                 </div>
 
                 {/* Portfolio Distribution - Uses Full Data (Current Status) */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-semibold text-gray-900 dark:text-white text-lg">포트폴리오 비중</h3>
                         <div className="text-xs text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">By Account</div>
                     </div>
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="flex-1 flex items-center justify-center min-h-[300px]">
                         <PortfolioChart data={investmentData} accounts={accountData} />
                     </div>
                 </div>
@@ -106,9 +108,11 @@ const Dashboard = () => {
             {/* Sub Charts / Details Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Monthly Activity - Uses Filtered Data (Transactions in period) */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
                     <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-6">월별 투자 활동</h3>
-                    <MonthlyActivityChart data={activityData} />
+                    <div className="h-[300px] w-full">
+                        <MonthlyActivityChart data={activityData} />
+                    </div>
                 </div>
                 {/* Recent Transactions List - Uses Filtered Data */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">

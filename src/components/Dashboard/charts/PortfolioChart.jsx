@@ -31,9 +31,22 @@ const PortfolioChart = ({ data, accounts }) => {
 
     }, [data, accounts]);
 
+    const [isMounted, setIsMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => setIsMounted(true), 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!isMounted) return (
+        <div className="h-[300px] w-full bg-gray-50/50 dark:bg-gray-800/50 animate-pulse rounded-xl flex items-center justify-center">
+            <div className="text-gray-400 text-sm">차트 로드 중...</div>
+        </div>
+    );
+
     return (
-        <div className="h-[300px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="relative w-full h-[300px] flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={300} debounce={100}>
                 <PieChart>
                     <Pie
                         data={chartData}

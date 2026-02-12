@@ -65,7 +65,8 @@ const CodeManagementTab = () => {
                 if (response.status === 404) {
                     throw new Error('CODES 시트가 존재하지 않습니다.');
                 }
-                throw new Error(result.error || result.message || '데이터 로드 실패');
+                const errorMsg = result.details ? `${result.error} (${result.details})` : (result.error || result.message || '데이터 로드 실패');
+                throw new Error(errorMsg);
             }
 
             if (!result.data || !Array.isArray(result.data)) {
@@ -81,7 +82,8 @@ const CodeManagementTab = () => {
             const sortedData = result.data.sort((a, b) => Number(a.order || 999) - Number(b.order || 999));
             setCodes(sortedData);
         } catch (err) {
-            console.error(err);
+            console.error('📊 [CodeManagementTab] loadCodes Error:', err);
+            console.log('📊 [CodeManagementTab] Using Sheet ID:', sheetId);
             setError(err.message);
             setCodes([]); // 에러 시 빈 배열
         } finally {

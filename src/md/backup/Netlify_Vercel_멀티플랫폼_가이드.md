@@ -11,6 +11,9 @@
 3. [단계별 구현 가이드](#3-단계별-구현-가이드)
 4. [플랫폼별 배포 설정](#4-플랫폼별-배포-설정)
 5. [비교표](#5-비교표)
+6. [전환 체크리스트](#6-전환-체크리스트)
+7. [추천 시나리오](#7-추천-시나리오)
+8. [Vercel 배포 상세 가이드 (2026-02-12 추가)](#8-vercel-배포-상세-가이드-2026-02-12-추가)
 
 ---
 
@@ -490,20 +493,15 @@ const apiUrl = import.meta.env.DEV
 
 ```json
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
+  "projectSettings": {
+    "framework": "vite"
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ],
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "env": {
     "VITE_API_BASE_URL": "/api"
   }
@@ -667,6 +665,68 @@ vercel --prod
 
 ---
 
+## 8. Vercel 배포 상세 가이드 (2026-02-12 추가)
+
+실제 배포 과정에서 확인된 상세 설정 및 트러블슈팅 가이드입니다.
+
+### Step 1: GitHub에 코드 Push
+
+```bash
+git add .
+git commit -m "Refactor for Vercel deployment"
+git push
+```
+
+### Step 2: Vercel 프로젝트 생성
+
+1. **[Vercel Dashboard](https://vercel.com/dashboard)** 접속
+2. **Add New...** -> **Project**
+3. **Import Git Repository**에서 해당 리포지토리 선택 (Import)
+
+### Step 3: 프로젝트 설정 확인
+
+* **Framework Preset**: `Vite`
+* **Root Directory**: `./`
+* **Build Command**: `npm run build`
+* **Output Directory**: `dist`
+
+### Step 4: 환경 변수 등록 (Environment Variables) **✨중요!**
+
+Vercel 대시보드의 **Settings > Environment Variables** 에서 등록합니다.
+(로컬 `.env` 파일의 값을 그대로 복사)
+
+| Key | Value 설명 | 비고 |
+| :--- | :--- | :--- |
+| **`VITE_API_BASE_URL`** | **`/api`** | **필수 설정** |
+| `VITE_SUPABASE_URL` | Supabase URL | |
+| `VITE_SUPABASE_ANON_KEY` | Supabase Anon Key | |
+| `VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL` | 구글 서비스 계정 이메일 | |
+| `VITE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | `-----BEGIN PRIVATE KEY...` 전체 포함 | 줄바꿈(`\n`) 포함 그대로 입력 |
+| `VITE_GOOGLE_SHEET_CONFIG` | `['...']` JSON 문자열 | 작은따옴표 제외하고 내용만 입력 |
+| `VITE_DATA_SHEET_ID` | 데이터 시트 ID | |
+| `VITE_AUTH_SHEET_ID` | 권한 시트 ID | |
+
+### Step 5: 트러블슈팅 (Troubleshooting)
+
+#### 1. Runtime Version Error 해결
+**증상**: `Error: Function Runtimes must have a valid version` 오류 발생
+**원인**: `vercel.json`에 `functions` 런타임(`nodejs18.x`)을 강제 설정하면 Vercel 자동 감지와 충돌할 수 있음.
+**해결**: `vercel.json`에서 `functions` 섹션 제거 (Vercel이 자동 감지하도록 둠).
+
+#### 2. 데이터 조회 실패 (Code/Management 탭)
+**증상**: 투자관리 탭은 작동하나, 기준정보/권한관리 탭에서 데이터 조회 안 됨.
+**원인**: 해당 컴포넌트들이 `localStorage`의 `sheet_id`에만 의존하게 구현됨. Vercel 최초 접속 시 `localStorage`가 비어있어 실패.
+**해결**: 환경 변수로 Fallback 하도록 코드 수정.
+```javascript
+// 변경 전
+const sheetId = localStorage.getItem('sheet_id') || '';
+
+// 변경 후
+const sheetId = localStorage.getItem('sheet_id') || import.meta.env.VITE_DATA_SHEET_ID || '';
+```
+
+---
+
 ## 🎉 완료!
 
 이제 **Netlify와 Vercel 양쪽에서 모두 배포 가능**하며, 필요 시 언제든 플랫폼을 전환할 수 있습니다!
@@ -676,5 +736,6 @@ vercel --prod
 - ✅ 플랫폼 전환 시간 최소화 (5분 이내)
 - ✅ 한 플랫폼에 문제 발생 시 즉시 다른 플랫폼으로 전환 가능
 - ✅ 로컬 개발 환경 영향 없음
+- ✅ **안정적인 데이터 연결** (환경 변수 Fallback 적용)
 
 궁금한 점이 있으시면 언제든 질문해 주세요! 🚀

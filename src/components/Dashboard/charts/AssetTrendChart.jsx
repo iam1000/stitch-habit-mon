@@ -29,9 +29,23 @@ const AssetTrendChart = ({ data, startDate }) => {
         return trendArray;
     }, [data, startDate]);
 
+    const [isMounted, setIsMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        // High delay to ensure layout computation is finished
+        const timer = setTimeout(() => setIsMounted(true), 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!isMounted) return (
+        <div className="h-[300px] w-full bg-gray-50/50 dark:bg-gray-800/50 animate-pulse rounded-xl flex items-center justify-center">
+            <div className="text-gray-400 text-sm">차트 로드 중...</div>
+        </div>
+    );
+
     return (
-        <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="relative w-full h-[300px]">
+            <ResponsiveContainer width="100%" height={300} debounce={100}>
                 <AreaChart
                     data={chartData}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}

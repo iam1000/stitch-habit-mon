@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
@@ -6,7 +6,8 @@ import {
     X,
     Moon,
     Sun,
-    Globe
+    Globe,
+    Menu
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -28,6 +29,9 @@ const MainLayout = () => {
     const { t, language, toggleLanguage } = useLanguage();
     const { signOut, permissions, menuDefs, loadingPermissions, user } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const scrollContainerRef = useRef(null);
+    const activeTabRef = useRef(null);
 
     // Initial Tabs State
     const [tabs, setTabs] = useState([
@@ -83,6 +87,17 @@ const MainLayout = () => {
 
         setActiveTab(currentPath);
     }, [location.pathname, permissions, menuDefs, loadingPermissions, t]);
+
+    // Auto-scroll active tab into view
+    useEffect(() => {
+        if (activeTabRef.current) {
+            activeTabRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+            });
+        }
+    }, [activeTab]);
 
     // Update tab labels when language changes
     useEffect(() => {
@@ -176,38 +191,118 @@ const MainLayout = () => {
                 </div>
             </aside>
 
+            {/* Mobile Sidebar Drawer */}
+            <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                {/* Backdrop */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+
+                {/* Drawer */}
+                <aside className={`absolute inset-y-0 left-0 w-72 bg-[var(--bg-card)] p-6 shadow-2xl flex flex-col transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div className="flex items-center justify-between mb-12">
+                        <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 bg-gradient-to-br from-[#42f05f] to-[#2ecc71] rounded-xl"></div>
+                            <span className="text-2xl font-bold font-heading text-[var(--text-main)]">HabitMons</span>
+                        </div>
+                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <nav className="flex-1 space-y-2 overflow-y-auto hide-scrollbar">
+                        {sidebarMenus.map((item) => {
+                            const Icon = getIconComponent(item.icon_name);
+                            return (
+                                <button
+                                    key={item.menu_code}
+                                    onClick={() => {
+                                        handleMenuClick(item.path);
+                                        setIsSidebarOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.path ? 'bg-purple-100 dark:bg-purple-900/40 text-[#8c36e2] dark:text-purple-400 font-bold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    {t[item.label_key] || item.label_key}
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="mt-8 space-y-2 border-t border-[var(--border-color)] pt-6">
+                        {bottomMenus.map((item) => {
+                            const Icon = getIconComponent(item.icon_name);
+                            return (
+                                <button
+                                    key={item.menu_code}
+                                    onClick={() => {
+                                        handleMenuClick(item.path);
+                                        setIsSidebarOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.path ? 'bg-purple-100 dark:bg-purple-900/40 text-[#8c36e2] dark:text-purple-400 font-bold' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    {t[item.label_key] || item.label_key}
+                                </button>
+                            );
+                        })}
+                        <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 rounded-xl transition-all font-bold">
+                            <LogOut className="w-5 h-5" />
+                            Sign Out
+                        </button>
+                    </div>
+                </aside>
+            </div>
+
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
                 {/* Tab Bar */}
-                <div className="h-12 border-b border-[var(--border-color)] flex items-center justify-between px-4 gap-2 transition-colors duration-200 bg-[var(--bg-card)]">
-                    <div className="flex-1 flex items-center gap-2 overflow-x-auto overflow-y-hidden hide-scrollbar">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon || Home;
-                            return (
-                                <div
-                                    key={tab.id}
-                                    onClick={() => handleTabClick(tab.id)}
-                                    className={`
-                                        flex items-center gap-2 px-4 py-2 rounded-t-lg border-t border-l border-r border-transparent cursor-pointer min-w-[120px] justify-between group select-none text-sm transition-colors whitespace-nowrap
-                                        ${activeTab === tab.id
-                                            ? 'bg-[var(--bg-main)] border-[var(--border-color)] !border-b-[var(--bg-main)] text-[#8c36e2] font-bold relative top-[1px]'
-                                            : 'text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Icon size={14} />
-                                        <span className="truncate max-w-[100px]">{tab.label}</span>
-                                    </div>
-                                    <button
-                                        onClick={(e) => handleTabClose(e, tab.id)}
-                                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400"
+                <div className="h-12 border-b border-[var(--border-color)] flex items-center justify-between px-2 sm:px-4 gap-2 transition-colors duration-200 bg-[var(--bg-card)]">
+                    {/* Mobile Menu Button */}
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="lg:hidden p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] transition-colors"
+                    >
+                        <Menu size={22} />
+                    </button>
+
+                    <div className="flex-1 relative h-full flex items-center overflow-hidden">
+                        <div
+                            ref={scrollContainerRef}
+                            className="w-full flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden hide-scrollbar h-full pt-1 pl-6 pr-12 sm:px-4"
+                        >
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon || Home;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <div
+                                        key={tab.id}
+                                        ref={isActive ? activeTabRef : null}
+                                        onClick={() => handleTabClick(tab.id)}
+                                        className={`
+                                            flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-t-lg border-t border-l border-r border-transparent cursor-pointer min-w-0 flex-shrink-0 transition-all duration-300 group select-none text-sm whitespace-nowrap
+                                            ${isActive
+                                                ? 'bg-[var(--bg-main)] border-[var(--border-color)] !border-b-[var(--bg-main)] text-[#8c36e2] font-bold relative top-[1px] z-10'
+                                                : 'text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]'
+                                            }
+                                        `}
                                     >
-                                        <X size={12} />
-                                    </button>
-                                </div>
-                            );
-                        })}
+                                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                            <Icon size={isActive ? 16 : 14} className={`flex-shrink-0 ${isActive ? 'text-[#8c36e2]' : ''}`} />
+                                            <span className={`inline-block truncate transition-all duration-300 ${isActive ? 'max-w-[120px] font-bold' : 'max-w-[80px]'}`}>
+                                                {tab.label}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={(e) => handleTabClose(e, tab.id)}
+                                            className={`flex-shrink-0 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all ${isActive ? 'opacity-100 ml-1 text-gray-600 dark:text-gray-300' : 'opacity-0 group-hover:opacity-100 text-gray-400'}`}
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {/* Scroll Gradient Hint */}
+                        <div className="absolute right-0 inset-y-0 w-8 bg-gradient-to-l from-[var(--bg-card)] to-transparent pointer-events-none z-20" />
                     </div>
 
                     {/* Actions: Language & Theme */}
@@ -243,49 +338,49 @@ const MainLayout = () => {
 
                 {/* Content Viewport */}
                 <div className="flex-1 overflow-y-auto transition-colors duration-200 bg-[var(--bg-main)]">
-                    {/* Persistent Views: Rendered if in tabs OR if current path matches (to ensure immediate render) */}
-                    {(tabs.some(tab => tab.id === '/dashboard') || location.pathname === '/dashboard') && (
-                        <div style={{ display: location.pathname === '/dashboard' ? 'block' : 'none', height: '100%' }}>
+                    {/* Content Views: Rendered only when active to prevent hidden chart dimension errors */}
+                    {location.pathname === '/dashboard' && (
+                        <div className="h-full">
                             <Dashboard />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/investment') || location.pathname === '/investment') && (
-                        <div style={{ display: location.pathname === '/investment' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/investment' && (
+                        <div className="h-full">
                             <Investment />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/codes') || location.pathname === '/codes') && (
-                        <div style={{ display: location.pathname === '/codes' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/codes' && (
+                        <div className="h-full">
                             <CodeManagement />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/notebooks') || location.pathname === '/notebooks') && (
-                        <div style={{ display: location.pathname === '/notebooks' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/notebooks' && (
+                        <div className="h-full">
                             <Notebooks />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/friends') || location.pathname === '/friends') && (
-                        <div style={{ display: location.pathname === '/friends' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/friends' && (
+                        <div className="h-full">
                             <Friends />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/my-monster') || location.pathname === '/my-monster') && (
-                        <div style={{ display: location.pathname === '/my-monster' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/my-monster' && (
+                        <div className="h-full">
                             <MyMonster />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/shop') || location.pathname === '/shop') && (
-                        <div style={{ display: location.pathname === '/shop' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/shop' && (
+                        <div className="h-full">
                             <Shop />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/leaderboard') || location.pathname === '/leaderboard') && (
-                        <div style={{ display: location.pathname === '/leaderboard' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/leaderboard' && (
+                        <div className="h-full">
                             <Leaderboard />
                         </div>
                     )}
-                    {(tabs.some(tab => tab.id === '/settings') || location.pathname === '/settings') && (
-                        <div style={{ display: location.pathname === '/settings' ? 'block' : 'none', height: '100%' }}>
+                    {location.pathname === '/settings' && (
+                        <div className="h-full">
                             <Settings />
                         </div>
                     )}
