@@ -8,11 +8,6 @@
             "destination": "/index.html"
         }
     ],
-    "functions": {
-        "api/**/*.js": {
-            "runtime": "nodejs18.x"
-        }
-    },
     "env": {
         "VITE_API_BASE_URL": "/api"
     }
