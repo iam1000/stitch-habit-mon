@@ -16,7 +16,7 @@ export const useDataMapper = (viewId) => {
     const rules = MAPPING_RULES[viewId] || [];
 
     // 환경 변수 및 설정 (로컬 스토리지 등에서 가져옴)
-    const sheetId = localStorage.getItem('sheet_id') || '';
+    const sheetId = localStorage.getItem('sheet_id') || import.meta.env.VITE_DATA_SHEET_ID || '';
     const clientEmail = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
     const privateKey = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '';
 
