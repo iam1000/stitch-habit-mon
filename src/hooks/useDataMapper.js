@@ -7,7 +7,7 @@ import { getApiUrl } from '../utils/apiConfig';
  * @param {string} viewId - 매핑 규칙을 적용할 화면 ID (예: 'ACCOUNTS_MANAGER')
  * @returns {object} - { loading, error, getMappedValue, refDataMap, reloadRefData }
  */
-export const useDataMapper = (viewId) => {
+export const useDataMapper = (viewId, currentSheetId) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [refDataMap, setRefDataMap] = useState({}); // { ruleKey: { refKey: displayValue } }
@@ -15,8 +15,8 @@ export const useDataMapper = (viewId) => {
 
     const rules = MAPPING_RULES[viewId] || [];
 
-    // 환경 변수 및 설정 (로컬 스토리지 등에서 가져옴)
-    const sheetId = localStorage.getItem('sheet_id') || import.meta.env.VITE_DATA_SHEET_ID || '';
+    // 환경 변수 및 설정 (인자로 받은 ID 우선 사용)
+    const sheetId = currentSheetId || localStorage.getItem('sheet_id') || import.meta.env.VITE_DATA_SHEET_ID || '';
     const clientEmail = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
     const privateKey = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '';
 
