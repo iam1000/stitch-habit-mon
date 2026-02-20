@@ -13,6 +13,6 @@ export const getApiUrl = (endpoint) => {
     if (import.meta.env.DEV) {
         return `http://localhost:3001/api/sheets/${endpoint}`;
     }
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/.netlify/functions';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
     return `${baseUrl}/sheets-${endpoint}`;
 };
