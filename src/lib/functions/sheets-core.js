@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 const getAuth = (clientEmail, privateKey) => {
     return new JWT({
         email: clientEmail,
-        key: privateKey.replace(/\\n/g, '\n'),
+        key: privateKey.replace(/"/g, '').replace(/\\n/g, '\n'),
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 };
